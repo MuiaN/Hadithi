@@ -218,7 +218,7 @@ export default function HelpPage() {
             Still need help?
           </h2>
           <p className="mb-4" style={{ color: 'var(--color-textSecondary)' }}>
-            Can't find what you're looking for? Our support team is here to help.
+            Can&apos;t find what you&apos;re looking for? Our support team is here to help.
           </p>
           <Link
             href="/contact"

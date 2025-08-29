@@ -10,11 +10,36 @@ import {
   BarChart3,
   Users
 } from 'lucide-react';
+import Image from 'next/image';
 import { contentApi } from '@/lib/api/contentApi';
 import useStore from '@/lib/store/useStore';
 
+// Type definitions
+interface AnalyticsData {
+  totalViews: number;
+  totalLikes: number;
+  totalComments: number;
+  contentCount: number;
+  topContent: ContentItem[];
+  viewsOverTime: { date: string; views: number }[];
+}
+
+interface ContentItem {
+  id: string;
+  title: string;
+  coverImage: string;
+  views: number;
+  likes: number;
+  status?: string;
+}
+
+interface User {
+  id: string;
+  // Add other user properties as needed
+}
+
 export default function CreatorAnalyticsPage() {
-  const [analytics, setAnalytics] = useState({
+  const [analytics, setAnalytics] = useState<AnalyticsData>({
     totalViews: 0,
     totalLikes: 0,
     totalComments: 0,
@@ -30,14 +55,16 @@ export default function CreatorAnalyticsPage() {
   useEffect(() => {
     const loadAnalytics = async () => {
       try {
+        if (!user?.id) return;
+
         const contentData = await contentApi.getAllContent({
-          author: user?.id,
+          author: user.id,
           includeUnpublished: true
         });
 
-        const content = contentData.content;
-        const totalViews = content.reduce((sum: number, c: any) => sum + c.views, 0);
-        const totalLikes = content.reduce((sum: number, c: any) => sum + c.likes, 0);
+        const content = contentData.content as ContentItem[];
+        const totalViews = content.reduce((sum: number, c: ContentItem) => sum + (c.views || 0), 0);
+        const totalLikes = content.reduce((sum: number, c: ContentItem) => sum + (c.likes || 0), 0);
 
         // Mock views over time data
         const viewsOverTime = [
@@ -55,7 +82,7 @@ export default function CreatorAnalyticsPage() {
           totalLikes,
           totalComments: 45, // Mock data
           contentCount: content.length,
-          topContent: content.sort((a: any, b: any) => b.views - a.views).slice(0, 5),
+          topContent: content.sort((a: ContentItem, b: ContentItem) => (b.views || 0) - (a.views || 0)).slice(0, 5),
           viewsOverTime
         });
       } catch (error) {
@@ -224,14 +251,16 @@ export default function CreatorAnalyticsPage() {
             Top Performing Content
           </h2>
           <div className="space-y-4">
-            {analytics.topContent.map((item: any, index: number) => (
+            {analytics.topContent.map((item: ContentItem, index: number) => (
               <div key={item.id} className="flex items-center space-x-4">
                 <div className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold" style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}>
                   {index + 1}
                 </div>
-                <img
+                <Image
                   src={item.coverImage}
                   alt={item.title}
+                  width={48}
+                  height={48}
                   className="w-12 h-12 rounded object-cover"
                 />
                 <div className="flex-1 min-w-0">

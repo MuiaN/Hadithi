@@ -35,7 +35,7 @@ export default function RootLayout({
     }
     
     setMounted(true);
-  }, []);
+  }, [currentTheme, currentTemplate, setTheme, setTemplate]);
 
   useEffect(() => {
     // Apply theme and template when they change (only after mount)

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { 
   Users, 
   FileText, 
@@ -33,7 +34,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [recentContent, setRecentContent] = useState<any[]>([]);
   const [recentUsers, setRecentUsers] = useState<any[]>([]);
-  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);  
 
   const { user, currentTheme, setTheme } = useStore();
   const themes = getAllThemes();
@@ -94,7 +95,7 @@ export default function AdminDashboard() {
           { id: '2', type: 'content_published', description: 'Article published: "Modern African Literature"', timestamp: '2024-02-15T13:15:00.000Z' },
           { id: '3', type: 'subscription_upgraded', description: 'User upgraded to Gold tier', timestamp: '2024-02-15T12:45:00.000Z' },
           { id: '4', type: 'content_flagged', description: 'Content flagged for review', timestamp: '2024-02-15T11:20:00.000Z' }
-        ]);
+        ]);        
 
       } catch (error) {
         console.error('Error loading dashboard data:', error);
@@ -150,6 +151,10 @@ export default function AdminDashboard() {
       </div>
     );
   }
+
+  const handleThemeChange = (themeName: string) => {
+    setTheme(themeName);
+  };
 
   return (
     <div className="p-8" style={{ backgroundColor: 'var(--color-background)' }}>
@@ -274,10 +279,12 @@ export default function AdminDashboard() {
           <div className="space-y-4">
             {recentContent.map((item) => (
               <div key={item.id} className="flex items-start space-x-4 p-4 rounded-lg hover:shadow-sm transition-shadow" style={{ backgroundColor: 'var(--color-backgroundSecondary)' }}>
-                <img
-                  src={item.coverImage} 
+                <Image
+                  src={item.coverImage}
                   alt={item.title}
                   className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
+                  width={64}
+                  height={64}
                 />
                 <div className="flex-1 min-w-0">
                   <h3 className="font-medium truncate" style={{ color: 'var(--color-textPrimary)' }}>
@@ -475,7 +482,4 @@ export default function AdminDashboard() {
 
     </div>
   );
-}
-  const handleThemeChange = (themeName: string) => {
-    setTheme(themeName);
-  };
+}  

@@ -19,7 +19,7 @@ export default function LoginPage() {
   const router = useRouter();
   const { setUser, addNotification } = useStore();
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
     setError('');
@@ -44,13 +44,13 @@ export default function LoginPage() {
         router.push('/dashboard');
       }
     } catch (err) {
-      setError(err.message || 'Login failed. Please try again.');
+      setError(err instanceof Error ? err.message : 'Login failed. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleChange = (e) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
@@ -65,7 +65,7 @@ export default function LoginPage() {
     { email: 'user@example.com', password: 'user123', role: 'User' }
   ];
 
-  const fillDemoCredentials = (email, password) => {
+  const fillDemoCredentials = (email: string, password: string) => {
     setFormData({ email, password });
   };
 
@@ -213,7 +213,7 @@ export default function LoginPage() {
           {/* Sign Up Link */}
           <div className="text-center">
             <p className="text-sm text-gray-600 dark:text-gray-400">
-              Don't have an account?{' '}
+              Don&apos;t have an account?{' '}
               <Link
                 href="/auth/register"
                 className="font-medium text-amber-600 dark:text-amber-400 hover:text-amber-500 dark:hover:text-amber-300 transition-colors"

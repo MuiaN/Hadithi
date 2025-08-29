@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { contentApi } from '@/lib/api/contentApi';
 import useStore from '@/lib/store/useStore';
+import Image from 'next/image';
 
 interface ContentItem {
   id: string;
@@ -216,15 +217,17 @@ export default function EditorContentPage() {
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y" style={{ divideColor: 'var(--color-border)' }}>
+            <tbody className="divide-y" style={{ outlineColor: 'var(--color-border)' }}>
               {filteredContent.map((item) => (
                 <tr key={item.id} className="hover:bg-opacity-50" style={{ backgroundColor: 'transparent' }}>
                   <td className="px-6 py-4">
                     <div className="flex items-center space-x-3">
-                      <img 
+                      <Image 
                         src={item.coverImage} 
                         alt={item.title}
                         className="w-12 h-12 rounded-lg object-cover"
+                        width={48}
+                        height={48}
                       />
                       <div>
                         <h3 className="font-medium line-clamp-1" style={{ color: 'var(--color-textPrimary)' }}>

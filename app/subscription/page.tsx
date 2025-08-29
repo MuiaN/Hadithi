@@ -295,7 +295,7 @@ export default function SubscriptionPage() {
                 Can I cancel my subscription?
               </h3>
               <p className="text-sm" style={{ color: 'var(--color-textSecondary)' }}>
-                Yes, you can cancel your subscription at any time. You'll retain access until the end of your billing period.
+                Yes, you can cancel your subscription at any time. You&apos;ll retain access until the end of your billing period.
               </p>
             </div>
           </div>

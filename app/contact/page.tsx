@@ -45,7 +45,7 @@ export default function ContactPage() {
               Get in Touch
             </h1>
             <p className="text-xl mb-8 max-w-3xl mx-auto" style={{ color: 'var(--color-textSecondary)' }}>
-              We'd love to hear from you. Send us a message and we'll respond as soon as possible.
+              We&apos;d love to hear from you. Send us a message and we&apos;ll respond as soon as possible.
             </p>
           </div>
         </div>
@@ -74,7 +74,7 @@ export default function ContactPage() {
                       contact@hadithi.com
                     </p>
                     <p className="text-sm" style={{ color: 'var(--color-textTertiary)' }}>
-                      We'll respond within 24 hours
+                      We&apos;ll respond within 24 hours
                     </p>
                   </div>
                 </div>

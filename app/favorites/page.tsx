@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { contentApi } from '@/lib/api/contentApi';
 import useStore from '@/lib/store/useStore';
+import Image from 'next/image';
 
 interface ContentItem {
   id: string;
@@ -105,7 +106,7 @@ export default function FavoritesPage() {
           My Favorites
         </h1>
         <p style={{ color: 'var(--color-textSecondary)' }}>
-          Content you've liked and want to revisit
+          Content you&apos;ve liked and want to revisit
         </p>
       </div>
 
@@ -179,9 +180,11 @@ export default function FavoritesPage() {
               style={{ backgroundColor: 'var(--color-card)' }}
             >
               <div className="relative h-48 overflow-hidden">
-                <img 
+                <Image 
                   src={item.coverImage} 
                   alt={item.title}
+                  width={384}
+                  height={216}
                   className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                 />
                 <div className="absolute top-4 left-4">

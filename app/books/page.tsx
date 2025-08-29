@@ -5,11 +5,25 @@ import Link from 'next/link';
 import { Search, Filter, Heart, Eye, Clock, BookOpen, Star } from 'lucide-react';
 import { contentApi } from '@/lib/api/contentApi';
 import useStore from '@/lib/store/useStore';
+import Image from 'next/image';
+
+interface Book {
+  id: string;
+  title: string;
+  author: string;
+  description: string;
+  coverImage: string;
+  readingTime: string;
+  likes: number;
+  views: number;
+  tags: string[];
+  isFree: boolean;
+}
 
 export default function BooksPage() {
-  const [books, setBooks] = useState([]);
+  const [books, setBooks] = useState<Book[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tags, setTags] = useState([]);
+  const [tags, setTags] = useState<string[]>([]);
   const { user, contentFilters, updateContentFilters } = useStore();
 
   useEffect(() => {
@@ -41,9 +55,9 @@ export default function BooksPage() {
   };
 
   const handleTagFilter = (tag: string) => {
-    const currentTags = contentFilters.tags || [];
+    const currentTags = Array.isArray(contentFilters.tags) ? contentFilters.tags : [];
     const newTags = currentTags.includes(tag)
-      ? currentTags.filter(t => t !== tag)
+      ? currentTags.filter((t: string) => t !== tag)
       : [...currentTags, tag];
     
     updateContentFilters({ tags: newTags });
@@ -184,9 +198,11 @@ export default function BooksPage() {
                 style={{ backgroundColor: 'var(--color-card)' }}
               >
                 <div className="relative h-64 overflow-hidden">
-                  <img 
+                  <Image 
                     src={book.coverImage} 
                     alt={book.title}
+                    width={400}
+                    height={256}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>

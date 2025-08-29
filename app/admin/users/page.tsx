@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { Users, UserPlus, Shield, Crown, Search, Filter, MoreHorizontal } from 'lucide-react';
 import { users } from '@/lib/mockData/users';
 import useStore from '@/lib/store/useStore';
+import Image from 'next/image';
 
 interface User {
   id: string;
@@ -251,15 +252,17 @@ export default function UsersPage() {
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y" style={{ divideColor: 'var(--color-border)' }}>
+            <tbody className="divide-y" style={{ outlineColor: 'var(--color-border)' }}>
               {filteredUsers.map((user) => (
                 <tr key={user.id} className="hover:bg-opacity-50" style={{ backgroundColor: 'transparent' }}>
                   <td className="px-6 py-4">
                     <div className="flex items-center space-x-3">
                       {user.avatar ? (
-                        <img
+                        <Image
                           src={user.avatar}
                           alt={user.name}
+                          width={40}
+                          height={40}
                           className="w-10 h-10 rounded-full object-cover"
                         />
                       ) : (

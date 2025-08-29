@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { contentApi } from '@/lib/api/contentApi';
 import useStore from '@/lib/store/useStore';
+import Image from 'next/image';
 
 export default function NewContentPage() {
   const [formData, setFormData] = useState({
@@ -21,7 +22,7 @@ export default function NewContentPage() {
     type: 'story',
     description: '',
     content: '',
-    tags: [],
+    tags: [] as string[],
     coverImage: '',
     isFree: true,
     subscriptionTier: null,
@@ -381,10 +382,12 @@ export default function NewContentPage() {
 
                 <div className="space-y-6">
                   {formData.coverImage && (
-                    <img
+                    <Image
                       src={formData.coverImage}
                       alt={formData.title}
                       className="w-full h-64 object-cover rounded-lg"
+                      width={400}
+                      height={300}
                     />
                   )}
 

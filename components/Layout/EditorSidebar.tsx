@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import useStore from '@/lib/store/useStore';
 import { authApi } from '@/lib/api/authApi';
+import Image from 'next/image';
 
 export default function EditorSidebar() {
   const [collapsed, setCollapsed] = useState(false);
@@ -136,9 +137,11 @@ export default function EditorSidebar() {
         <div className="p-4 border-b" style={{ borderColor: 'var(--color-border)' }}>
           <div className="flex items-center space-x-3">
             {user?.avatar ? (
-              <img 
+              <Image 
                 src={user.avatar} 
                 alt={user.name} 
+                width={40}
+                height={40}
                 className="w-10 h-10 rounded-full object-cover"
               />
             ) : (

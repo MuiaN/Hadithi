@@ -10,10 +10,12 @@ import {
   MessageCircle, 
   Search,
   Calendar,
+  Plus,
   TrendingUp
 } from 'lucide-react';
 import { contentApi } from '@/lib/api/contentApi';
 import useStore from '@/lib/store/useStore';
+import Image from 'next/image';
 
 interface ContentItem {
   id: string;
@@ -96,7 +98,7 @@ export default function PublishedPage() {
               Published Content
             </h1>
             <p style={{ color: 'var(--color-textSecondary)' }}>
-              Your content that's live and available to readers
+              Your content that&apos;s live and available to readers
             </p>
           </div>
           <div className="text-right">
@@ -160,10 +162,12 @@ export default function PublishedPage() {
               style={{ backgroundColor: 'var(--color-card)' }}
             >
               <div className="flex items-start space-x-6">
-                <img
+                <Image
                   src={item.coverImage}
                   alt={item.title}
                   className="w-32 h-24 rounded-lg object-cover flex-shrink-0"
+                  width={128}
+                  height={96}
                 />
 
                 <div className="flex-1 min-w-0">

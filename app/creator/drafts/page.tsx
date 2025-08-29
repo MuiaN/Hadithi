@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { contentApi } from '@/lib/api/contentApi';
 import useStore from '@/lib/store/useStore';
+import Image from 'next/image';
 
 interface ContentItem {
   id: string;
@@ -151,10 +152,12 @@ export default function DraftsPage() {
               style={{ backgroundColor: 'var(--color-card)' }}
             >
               <div className="relative h-48">
-                <img
+                <Image
                   src={item.coverImage}
                   alt={item.title}
                   className="w-full h-full object-cover"
+                  width={400}
+                  height={300}
                 />
                 <div className="absolute top-4 left-4">
                   <span className="px-2 py-1 text-xs font-medium rounded-full text-yellow-600 bg-yellow-100">

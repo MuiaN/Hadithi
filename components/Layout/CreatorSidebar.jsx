@@ -6,7 +6,8 @@ import { usePathname } from 'next/navigation';
 import { 
   LayoutDashboard, 
   FileText, 
-  Plus, 
+  Plus,
+  Mic, 
   Headphones,
   BarChart3, 
   MessageSquare,
@@ -20,6 +21,7 @@ import {
 } from 'lucide-react';
 import useStore from '@/lib/store/useStore';
 import { authApi } from '@/lib/api/authApi';
+import Image from 'next/image';
 
 export default function CreatorSidebar() {
   const [collapsed, setCollapsed] = useState(false);
@@ -51,6 +53,11 @@ export default function CreatorSidebar() {
       href: '/creator/new',
       icon: Plus,
       label: 'Create Content'
+    },
+    {
+      href: '/creator/create-podcast',
+      icon: Mic,
+      label: 'Create Podcast'
     },
     {
       href: '/creator/content',
@@ -137,10 +144,12 @@ export default function CreatorSidebar() {
         <div className="p-4 border-b" style={{ borderColor: 'var(--color-border)' }}>
           <div className="flex items-center space-x-3">
             {user?.avatar ? (
-              <img 
+              <Image 
                 src={user.avatar} 
                 alt={user.name} 
                 className="w-10 h-10 rounded-full object-cover"
+                width={40}
+                height={40}
               />
             ) : (
               <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-full flex items-center justify-center">

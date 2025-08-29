@@ -12,6 +12,7 @@ import {
   MoreHorizontal
 } from 'lucide-react';
 import { contentApi } from '@/lib/api/contentApi';
+import Image from 'next/image';
 
 interface Comment {
   id: string;
@@ -297,10 +298,12 @@ export default function CommentsPage() {
             <div className="flex items-start justify-between">
               <div className="flex items-start space-x-4 flex-1">
                 {comment.userAvatar ? (
-                  <img
+                  <Image
                     src={comment.userAvatar}
                     alt={comment.userName}
                     className="w-10 h-10 rounded-full object-cover"
+                    width={40}
+                    height={40}
                   />
                 ) : (
                   <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-full flex items-center justify-center">

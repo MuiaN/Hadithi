@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { 
   User, 
   Mail, 
@@ -209,7 +210,7 @@ export default function AdminProfilePage() {
                   />
                   {profileData.avatar ? (
                     <div className="relative">
-                      <img
+                      <Image
                         src={profileData.avatar}
                         alt={profileData.name}
                         className="w-24 h-24 rounded-full object-cover"

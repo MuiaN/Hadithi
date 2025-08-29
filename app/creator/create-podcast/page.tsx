@@ -13,15 +13,28 @@ import {
   Clock,
   Mic
 } from 'lucide-react';
+import Image from 'next/image';
 import { contentApi } from '@/lib/api/contentApi';
 import useStore from '@/lib/store/useStore';
+
+interface PodcastFormData {
+  title: string;
+  description: string;
+  content: string;
+  tags: string[];
+  coverImage: string;
+  audioUrl: string;
+  duration: string;
+  isFree: boolean;
+  subscriptionTier: string;
+}
 
 export default function CreatePodcastPage() {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     content: '',
-    tags: [],
+    tags: [] as string[],
     coverImage: '',
     audioUrl: '',
     duration: '',
@@ -399,10 +412,12 @@ export default function CreatePodcastPage() {
                 <div className="space-y-6">
                   <div className="flex items-start space-x-6">
                     {formData.coverImage && (
-                      <img
+                      <Image
                         src={formData.coverImage}
                         alt={formData.title}
                         className="w-48 h-48 object-cover rounded-lg flex-shrink-0"
+                        width={192}
+                        height={192}
                       />
                     )}
                     

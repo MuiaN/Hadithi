@@ -16,6 +16,19 @@ import {
 import useStore from '@/lib/store/useStore';
 import { getAllThemes } from '@/lib/themes';
 
+// Define template type and array
+interface Template {
+  name: string;
+  displayName: string;
+  description: string;
+}
+
+const templates: Template[] = [
+  { name: 'baobab', displayName: 'Baobab', description: 'Default layout with sidebar' },
+  { name: 'acacia', displayName: 'Acacia', description: 'Minimalist layout' },
+  { name: 'palm', displayName: 'Palm', description: 'Wide content layout' }
+];
+
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('account');
   const [settings, setSettings] = useState({
@@ -207,8 +220,39 @@ export default function SettingsPage() {
                       </p>
                     </div>
                   </div>
+                </div>
+              )}
+
+              {/* Notification Settings */}
+              {activeTab === 'notifications' && (
+                <div className="space-y-6">
+                  <h2 className="text-xl font-semibold" style={{ color: 'var(--color-textPrimary)' }}>
+                    Notification Settings
+                  </h2>
+                  
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-medium" style={{ color: 'var(--color-textPrimary)' }}>Email Notifications</h3>
+                        <p className="text-sm" style={{ color: 'var(--color-textSecondary)' }}>Receive notifications via email</p>
+                      </div>
+                      <input
+                        type="checkbox"
                         checked={settings.notifications.email}
                         onChange={(e) => updateSetting('notifications', 'email', e.target.checked)}
+                        className="rounded"
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="font-medium" style={{ color: 'var(--color-textPrimary)' }}>Push Notifications</h3>
+                        <p className="text-sm" style={{ color: 'var(--color-textSecondary)' }}>Receive browser notifications</p>
+                      </div>
+                      <input
+                        type="checkbox"
+                        checked={settings.notifications.push}
+                        onChange={(e) => updateSetting('notifications', 'push', e.target.checked)}
                         className="rounded"
                       />
                     </div>

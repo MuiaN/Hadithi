@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { Menu, X, User, LogOut, Settings, LayoutDashboard } from 'lucide-react';
 import useStore from '@/lib/store/useStore';
 import { authApi } from '@/lib/api/authApi';
+import Image from 'next/image';
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -133,9 +134,11 @@ export default function Navbar() {
                   }}
                 >
                   {user?.avatar ? (
-                    <img 
+                    <Image 
                       src={user.avatar} 
                       alt={user.name} 
+                      width={32}
+                      height={32}
                       className="w-8 h-8 rounded-full object-cover"
                     />
                   ) : (

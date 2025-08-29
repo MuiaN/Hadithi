@@ -1,15 +1,99 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import { Search, Filter, Heart, Eye, Clock, Tag } from 'lucide-react';
 import { contentApi } from '@/lib/api/contentApi';
 import useStore from '@/lib/store/useStore';
 
+// Define TypeScript interfaces based on API response
+interface ApiStory {
+  id: string;
+  title: string;
+  description: string;
+  author: string;
+  authorId: string;
+  coverImage: string;
+  publishedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  readingTime: string;
+  likes: number;
+  views: number;
+  tags: string[];
+  isFree: boolean;
+  type: string;
+  content: string;
+  status: string;
+  subscriptionTier: string | null;
+  // Additional properties that might exist in API response
+  [key: string]: unknown;
+}
+
+// Our app-specific Story interface
+interface Story {
+  id: string;
+  title: string;
+  description: string;
+  author: string;
+  coverImage: string;
+  publishedAt: string;
+  readingTime: string;
+  likes: number;
+  views: number;
+  tags: string[];
+  isFree: boolean;
+}
+
+interface ContentFilters {
+  search?: string;
+  tags?: string[];
+  sortBy?: string;
+}
+
+// Type guard to check if an object is a valid Story
+function isValidStory(data: unknown): data is Story {
+  if (typeof data !== 'object' || data === null) return false;
+  
+  const story = data as Partial<Story>;
+  return (
+    typeof story.id === 'string' &&
+    typeof story.title === 'string' &&
+    typeof story.description === 'string' &&
+    typeof story.author === 'string' &&
+    typeof story.coverImage === 'string' &&
+    typeof story.publishedAt === 'string' &&
+    typeof story.readingTime === 'string' &&
+    typeof story.likes === 'number' &&
+    typeof story.views === 'number' &&
+    Array.isArray(story.tags) &&
+    story.tags.every(tag => typeof tag === 'string') &&
+    typeof story.isFree === 'boolean'
+  );
+}
+
+// Function to convert API story to our app Story format
+function mapApiStoryToStory(apiStory: ApiStory): Story {
+  return {
+    id: apiStory.id,
+    title: apiStory.title,
+    description: apiStory.description,
+    author: apiStory.author,
+    coverImage: apiStory.coverImage,
+    publishedAt: apiStory.publishedAt || apiStory.createdAt, // Fallback to createdAt if publishedAt is null
+    readingTime: apiStory.readingTime,
+    likes: apiStory.likes,
+    views: apiStory.views,
+    tags: apiStory.tags,
+    isFree: apiStory.isFree
+  };
+}
+
 export default function StoriesPage() {
-  const [stories, setStories] = useState([]);
+  const [stories, setStories] = useState<Story[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tags, setTags] = useState([]);
+  const [tags, setTags] = useState<string[]>([]);
   const { user, contentFilters, updateContentFilters } = useStore();
 
   useEffect(() => {
@@ -24,10 +108,23 @@ export default function StoriesPage() {
           contentApi.getAllTags()
         ]);
         
-        setStories(contentData.content);
+        // Map API stories to our Story format and filter out invalid ones
+        const validStories = contentData.content
+          .map((item: unknown) => {
+            // First try to map API story format
+            const apiStory = item as ApiStory;
+            if (apiStory.id && apiStory.type === 'story') {
+              return mapApiStoryToStory(apiStory);
+            }
+            return null;
+          })
+          .filter((story): story is Story => story !== null && isValidStory(story));
+        
+        setStories(validStories);
         setTags(allTags);
       } catch (error) {
         console.error('Error loading stories:', error);
+        setStories([]);
       } finally {
         setLoading(false);
       }
@@ -36,31 +133,35 @@ export default function StoriesPage() {
     loadData();
   }, [contentFilters, user]);
 
-  const handleSearchChange = (e) => {
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     updateContentFilters({ search: e.target.value });
   };
 
-  const handleTagFilter = (tag) => {
-    const currentTags = contentFilters.tags || [];
+  const handleTagFilter = (tag: string) => {
+    // Ensure tags is always treated as string[]
+    const currentTags: string[] = Array.isArray(contentFilters.tags) 
+      ? contentFilters.tags 
+      : [];
+    
     const newTags = currentTags.includes(tag)
-      ? currentTags.filter(t => t !== tag)
+      ? currentTags.filter(t => t !== tag) // TypeScript can now infer 't' is string
       : [...currentTags, tag];
     
     updateContentFilters({ tags: newTags });
   };
 
-  const handleSortChange = (sortBy) => {
+  const handleSortChange = (sortBy: string) => {
     updateContentFilters({ sortBy });
   };
 
-  const formatNumber = (num) => {
+  const formatNumber = (num: number) => {
     if (num >= 1000) {
       return (num / 1000).toFixed(1) + 'k';
     }
     return num.toString();
   };
 
-  const formatDate = (dateString) => {
+  const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -90,14 +191,14 @@ export default function StoriesPage() {
             <input
               type="text"
               placeholder="Search stories by title, description, or tags..."
-              value={contentFilters.search}
+              value={contentFilters.search || ''}
               onChange={handleSearchChange}
               className="w-full pl-12 pr-4 py-3 rounded-lg border focus:ring-2 focus:border-transparent"
               style={{
                 backgroundColor: 'var(--color-input)',
                 borderColor: 'var(--color-inputBorder)',
                 color: 'var(--color-textPrimary)',
-                focusRingColor: 'var(--color-primary)'
+                outlineColor: 'var(--color-primary)'
               }}
             />
           </div>
@@ -136,14 +237,14 @@ export default function StoriesPage() {
                 Sort:
               </span>
               <select
-                value={contentFilters.sortBy}
+                value={contentFilters.sortBy || 'publishedAt'}
                 onChange={(e) => handleSortChange(e.target.value)}
                 className="px-3 py-2 rounded-lg border text-sm focus:ring-2 focus:border-transparent"
                 style={{
                   backgroundColor: 'var(--color-input)',
                   borderColor: 'var(--color-inputBorder)',
                   color: 'var(--color-textPrimary)',
-                  focusRingColor: 'var(--color-primary)'
+                  outlineColor: 'var(--color-primary)'
                 }}
               >
                 <option value="publishedAt">Latest</option>
@@ -177,16 +278,16 @@ export default function StoriesPage() {
             ))}
           </div>
         ) : stories.length > 0 ? (
-          <div className="content-grid">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {stories.map((story) => (
               <Link
                 key={story.id}
                 href={`/content/${story.id}`}
-                className="card group overflow-hidden transition-all duration-300 hover:-translate-y-1"
+                className="card group overflow-hidden transition-all duration-300 hover:-translate-y-1 rounded-lg shadow-md"
                 style={{ backgroundColor: 'var(--color-card)' }}
               >
                 <div className="relative h-48 overflow-hidden">
-                  <img 
+                  <Image 
                     src={story.coverImage} 
                     alt={story.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"

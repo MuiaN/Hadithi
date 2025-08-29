@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Search, Filter, Heart, Eye, Clock, Play, Pause, Volume2, Headphones } from 'lucide-react';
 import { contentApi } from '@/lib/api/contentApi';
 import useStore from '@/lib/store/useStore';
+import Image from 'next/image';
 
 interface PodcastItem {
   id: string;
@@ -149,7 +150,7 @@ export default function PodcastsPage() {
   const handleTagFilter = (tag: string) => {
     const currentTags = contentFilters.tags || [];
     const newTags = currentTags.includes(tag)
-      ? currentTags.filter(t => t !== tag)
+      ? currentTags.filter((t: string) => t !== tag)
       : [...currentTags, tag];
     
     updateContentFilters({ tags: newTags });
@@ -185,7 +186,7 @@ export default function PodcastsPage() {
       podcast.description.toLowerCase().includes(contentFilters.search.toLowerCase());
     
     const matchesTags = !contentFilters.tags?.length || 
-      contentFilters.tags.some(tag => podcast.tags.includes(tag));
+      contentFilters.tags.some((tag: string) => podcast.tags.includes(tag));
     
     return matchesSearch && matchesTags;
   });
@@ -304,10 +305,12 @@ export default function PodcastsPage() {
                 style={{ backgroundColor: 'var(--color-card)' }}
               >
                 <div className="relative h-64 overflow-hidden">
-                  <img 
-                    src={podcast.coverImage} 
+                  <Image
+                    src={podcast.coverImage}
                     alt={podcast.title}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    width={384}
+                    height={216}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
                   

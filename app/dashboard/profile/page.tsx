@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import useStore from '@/lib/store/useStore';
 import { authApi } from '@/lib/api/authApi';
+import Image from 'next/image';
 
 export default function UserProfilePage() {
   const [editing, setEditing] = useState(false);
@@ -204,10 +205,12 @@ export default function UserProfilePage() {
                   />
                   {profileData.avatar ? (
                     <div className="relative">
-                      <img
+                      <Image
                         src={profileData.avatar}
                         alt={profileData.name}
                         className="w-24 h-24 rounded-full object-cover"
+                        width={96}
+                        height={96}
                       />
                       {editing && (
                         <button

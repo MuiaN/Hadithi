@@ -14,9 +14,57 @@ import {
 } from 'lucide-react';
 import { contentApi } from '@/lib/api/contentApi';
 import { subscriptionApi } from '@/lib/api/subscriptionApi';
+import Image from 'next/image';
+
+// Define TypeScript interfaces for our data structures
+interface OverviewStats {
+  totalViews: number;
+  totalUsers: number;
+  totalContent: number;
+  engagement: number;
+}
+
+interface ContentPerformanceItem {
+  id: string;
+  title: string;
+  type: string;
+  coverImage: string;
+  views: number;
+  likes: number;
+  status?: string;
+  author?: string;
+  authorId?: string;
+  description?: string;
+  publishedAt?: string;
+  createdAt?: string;
+  tags?: string[];
+  isFree?: boolean;
+  subscriptionTier?: string;
+}
+
+interface UserGrowthData {
+  month: string;
+  users: number;
+}
+
+interface SubscriptionStats {
+  total: number;
+  byTier: {
+    bronze: number;
+    silver: number;
+    gold: number;
+  };
+}
+
+interface AnalyticsData {
+  overview: OverviewStats;
+  contentPerformance: ContentPerformanceItem[];
+  userGrowth: UserGrowthData[];
+  subscriptionStats: SubscriptionStats;
+}
 
 export default function AnalyticsPage() {
-  const [analytics, setAnalytics] = useState({
+  const [analytics, setAnalytics] = useState<AnalyticsData>({
     overview: {
       totalViews: 0,
       totalUsers: 0,
@@ -41,12 +89,12 @@ export default function AnalyticsPage() {
           subscriptionApi.getSubscriptionStats()
         ]);
 
-        // Calculate analytics
-        const totalViews = contentData.content.reduce((sum: number, c: any) => sum + c.views, 0);
-        const totalLikes = contentData.content.reduce((sum: number, c: any) => sum + c.likes, 0);
+        // Calculate analytics with proper typing
+        const totalViews = contentData.content.reduce((sum: number, c: any) => sum + (c.views || 0), 0);
+        const totalLikes = contentData.content.reduce((sum: number, c: any) => sum + (c.likes || 0), 0);
         
         // Mock user growth data
-        const userGrowthData = [
+        const userGrowthData: UserGrowthData[] = [
           { month: 'Jan', users: 120 },
           { month: 'Feb', users: 150 },
           { month: 'Mar', users: 180 },
@@ -55,18 +103,48 @@ export default function AnalyticsPage() {
           { month: 'Jun', users: 350 }
         ];
 
+        // Transform content data to match ContentPerformanceItem interface
+        const contentPerformance: ContentPerformanceItem[] = contentData.content
+          .map((item: any) => ({
+            id: item.id,
+            title: item.title,
+            type: item.type,
+            coverImage: item.coverImage,
+            views: item.views || 0,
+            likes: item.likes || 0,
+            status: item.status,
+            author: item.author,
+            authorId: item.authorId,
+            description: item.description,
+            publishedAt: item.publishedAt,
+            createdAt: item.createdAt,
+            tags: item.tags,
+            isFree: item.isFree,
+            subscriptionTier: item.subscriptionTier
+          }))
+          .sort((a: ContentPerformanceItem, b: ContentPerformanceItem) => (b.views || 0) - (a.views || 0))
+          .slice(0, 10);
+
+        // Transform subscription stats to match SubscriptionStats interface
+        const formattedSubscriptionStats: SubscriptionStats = {
+          total: subscriptionStats.activeSubscribers || 0,
+          byTier: {
+            bronze: subscriptionStats.byTier?.bronze || 0,
+            silver: subscriptionStats.byTier?.silver || 0,
+            gold: subscriptionStats.byTier?.gold || 0
+          }
+        };
+
         setAnalytics({
           overview: {
             totalViews,
             totalUsers: 350,
             totalContent: contentData.content.length,
-            engagement: Math.round((totalLikes / totalViews) * 100) || 0
+            engagement: totalViews > 0 ? Math.round((totalLikes / totalViews) * 100) : 0
           },
-          contentPerformance: contentData.content
-            .sort((a: any, b: any) => b.views - a.views)
-            .slice(0, 10),
+          contentPerformance,
           userGrowth: userGrowthData,
-          subscriptionStats
+          subscriptionStats: formattedSubscriptionStats
         });
       } catch (error) {
         console.error('Error loading analytics:', error);
@@ -252,7 +330,7 @@ export default function AnalyticsPage() {
                     className="h-2 rounded-full"
                     style={{
                       backgroundColor: 'var(--color-warning)',
-                      width: `${(analytics.subscriptionStats.byTier.bronze / analytics.subscriptionStats.total) * 100}%`
+                      width: `${analytics.subscriptionStats.total > 0 ? (analytics.subscriptionStats.byTier.bronze / analytics.subscriptionStats.total) * 100 : 0}%`
                     }}
                   ></div>
                 </div>
@@ -269,7 +347,7 @@ export default function AnalyticsPage() {
                     className="h-2 rounded-full"
                     style={{
                       backgroundColor: 'var(--color-chart2)',
-                      width: `${(analytics.subscriptionStats.byTier.silver / analytics.subscriptionStats.total) * 100}%`
+                      width: `${analytics.subscriptionStats.total > 0 ? (analytics.subscriptionStats.byTier.silver / analytics.subscriptionStats.total) * 100 : 0}%`
                     }}
                   ></div>
                 </div>
@@ -286,7 +364,7 @@ export default function AnalyticsPage() {
                     className="h-2 rounded-full"
                     style={{
                       backgroundColor: 'var(--color-primary)',
-                      width: `${(analytics.subscriptionStats.byTier.gold / analytics.subscriptionStats.total) * 100}%`
+                      width: `${analytics.subscriptionStats.total > 0 ? (analytics.subscriptionStats.byTier.gold / analytics.subscriptionStats.total) * 100 : 0}%`
                     }}
                   ></div>
                 </div>
@@ -326,13 +404,15 @@ export default function AnalyticsPage() {
               </tr>
             </thead>
             <tbody>
-              {analytics.contentPerformance.map((item: any) => (
+              {analytics.contentPerformance.map((item) => (
                 <tr key={item.id} className="border-b" style={{ borderColor: 'var(--color-border)' }}>
                   <td className="py-3 px-4">
                     <div className="flex items-center space-x-3">
-                      <img
+                      <Image
                         src={item.coverImage}
                         alt={item.title}
+                        width={40}
+                        height={40}
                         className="w-10 h-10 rounded object-cover"
                       />
                       <span className="font-medium" style={{ color: 'var(--color-textPrimary)' }}>
@@ -357,7 +437,7 @@ export default function AnalyticsPage() {
                   </td>
                   <td className="py-3 px-4">
                     <span className="text-sm" style={{ color: 'var(--color-success)' }}>
-                      {Math.round((item.likes / item.views) * 100) || 0}%
+                      {item.views > 0 ? Math.round((item.likes / item.views) * 100) : 0}%
                     </span>
                   </td>
                 </tr>

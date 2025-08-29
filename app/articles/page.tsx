@@ -2,14 +2,51 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { Search, Filter, Heart, Eye, Clock, FileText, Calendar } from 'lucide-react';
 import { contentApi } from '@/lib/api/contentApi';
 import useStore from '@/lib/store/useStore';
 
+// Define interfaces for our data structures
+interface Article {
+  id: string;
+  title: string;
+  author: string;
+  description: string;
+  coverImage: string;
+  publishedAt: string;
+  readingTime: string;
+  likes: number;
+  views: number;
+  type: string;
+  tags: string[];
+  status: string;
+  isFree: boolean;
+  subscriptionTier?: string;
+}
+
+interface ContentFilters {
+  type: string;
+  tags: string[];
+  author: string;
+  search: string;
+  sortBy: string;
+  sortOrder: string;
+  userTier?: string;
+  includeUnpublished?: boolean;
+  limit?: number;
+  page?: number;
+}
+
+interface User {
+  subscription?: string;
+  // Add other user properties as needed
+}
+
 export default function ArticlesPage() {
-  const [articles, setArticles] = useState([]);
+  const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
-  const [tags, setTags] = useState([]);
+  const [tags, setTags] = useState<string[]>([]);
   const { user, contentFilters, updateContentFilters } = useStore();
 
   useEffect(() => {
@@ -20,12 +57,12 @@ export default function ArticlesPage() {
             type: 'article',
             userTier: user?.subscription || 'free',
             ...contentFilters
-          }),
+          } as ContentFilters),
           contentApi.getAllTags()
         ]);
         
-        setArticles(contentData.content);
-        setTags(allTags);
+        setArticles(contentData.content as Article[]);
+        setTags(allTags as string[]);
       } catch (error) {
         console.error('Error loading articles:', error);
       } finally {
@@ -43,7 +80,7 @@ export default function ArticlesPage() {
   const handleTagFilter = (tag: string) => {
     const currentTags = contentFilters.tags || [];
     const newTags = currentTags.includes(tag)
-      ? currentTags.filter(t => t !== tag)
+      ? currentTags.filter((t: string) => t !== tag)
       : [...currentTags, tag];
     
     updateContentFilters({ tags: newTags });
@@ -90,7 +127,7 @@ export default function ArticlesPage() {
             <input
               type="text"
               placeholder="Search articles by title, topic, or author..."
-              value={contentFilters.search}
+              value={contentFilters.search || ''}
               onChange={handleSearchChange}
               className="w-full pl-12 pr-4 py-3 rounded-lg border focus:ring-2 focus:border-transparent"
               style={{
@@ -135,7 +172,7 @@ export default function ArticlesPage() {
                 Sort:
               </span>
               <select
-                value={contentFilters.sortBy}
+                value={contentFilters.sortBy || 'publishedAt'}
                 onChange={(e) => handleSortChange(e.target.value)}
                 className="px-3 py-2 rounded-lg border text-sm focus:ring-2 focus:border-transparent"
                 style={{
@@ -178,7 +215,7 @@ export default function ArticlesPage() {
           </div>
         ) : articles.length > 0 ? (
           <div className="space-y-6">
-            {articles.map((article: any) => (
+            {articles.map((article) => (
               <Link
                 key={article.id}
                 href={`/content/${article.id}`}
@@ -187,9 +224,11 @@ export default function ArticlesPage() {
               >
                 <div className="flex space-x-6">
                   <div className="flex-shrink-0">
-                    <img 
+                    <Image 
                       src={article.coverImage} 
                       alt={article.title}
+                      width={128}
+                      height={96}
                       className="w-32 h-24 rounded-lg object-cover"
                     />
                   </div>

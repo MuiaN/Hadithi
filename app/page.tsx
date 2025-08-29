@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ArrowRight, BookOpen, Users, Zap, Star, Heart, Eye, Clock, Play, Pause, Volume2, Headphones, Mic, FileText, ChevronLeft, ChevronRight } from 'lucide-react';
 import { contentApi } from '@/lib/api/contentApi';
 import useStore from '@/lib/store/useStore';
@@ -204,10 +205,13 @@ export default function Home() {
                 index === currentSlide ? 'opacity-100' : 'opacity-0'
               }`}
             >
-              <img 
+              <Image 
                 src={slide.image}
                 alt={slide.title}
                 className="w-full h-full object-cover"
+                width={1920}
+                height={1080}
+                priority={index === 0}
               />
             </div>
           ))}
@@ -337,10 +341,12 @@ export default function Home() {
                 style={{ backgroundColor: 'var(--color-card)' }}
               >
                 <div className="relative h-64 overflow-hidden">
-                  <img 
+                  <Image 
                     src={podcast.coverImage} 
                     alt={podcast.title}
                     className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                    width={400}
+                    height={256}
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
                   
@@ -439,10 +445,12 @@ export default function Home() {
                   style={{ backgroundColor: 'var(--color-card)' }}
                 >
                   <div className="relative h-48 overflow-hidden">
-                    <img 
+                    <Image 
                       src={item.coverImage} 
                       alt={item.title}
                       className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      width={400}
+                      height={192}
                     />
                     <div className="absolute top-4 left-4">
                       <span className="px-3 py-1 text-white text-xs font-semibold rounded-full capitalize" style={{ backgroundColor: 'var(--color-primary)' }}>
@@ -541,10 +549,12 @@ export default function Home() {
                         style={{ backgroundColor: 'var(--color-card)' }}
                       >
                         <div className="relative h-48 overflow-hidden">
-                          <img 
+                          <Image 
                             src={item.coverImage} 
                             alt={item.title}
                             className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                            width={400}
+                            height={192}
                           />
                           <div className="absolute top-4 left-4">
                             <span className="px-3 py-1 text-white text-xs font-semibold rounded-full capitalize" style={{ backgroundColor: 'var(--color-primary)' }}>

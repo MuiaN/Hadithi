@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { contentApi } from '@/lib/api/contentApi';
 import useStore from '@/lib/store/useStore';
+import Image from 'next/image';
 
 interface Comment {
   id: string;
@@ -152,10 +153,12 @@ export default function CreatorCommentsPage() {
             >
               <div className="flex items-start space-x-4">
                 {comment.userAvatar ? (
-                  <img
+                  <Image
                     src={comment.userAvatar}
                     alt={comment.userName}
                     className="w-12 h-12 rounded-full object-cover"
+                    width={48}
+                    height={48}
                   />
                 ) : (
                   <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-600 rounded-full flex items-center justify-center">

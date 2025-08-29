@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { contentApi } from '@/lib/api/contentApi';
 import useStore from '@/lib/store/useStore';
+import Image from 'next/image';
 
 interface ReadingHistoryItem {
   id: string;
@@ -183,10 +184,12 @@ export default function ReadingHistoryPage() {
               style={{ backgroundColor: 'var(--color-card)' }}
             >
               <div className="flex items-start space-x-6">
-                <img
+                <Image
                   src={item.coverImage}
                   alt={item.title}
                   className="w-24 h-18 rounded-lg object-cover flex-shrink-0"
+                  width={96}
+                  height={72}
                 />
 
                 <div className="flex-1 min-w-0">

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Search, Users, BookOpen, Eye, Heart, MapPin } from 'lucide-react';
 import { users } from '@/lib/mockData/users';
 import { content } from '@/lib/mockData/content';
+import Image from 'next/image';
 
 interface Author {
   id: string;
@@ -147,9 +148,11 @@ export default function AuthorsPage() {
               >
                 <div className="text-center mb-6">
                   {author.avatar ? (
-                    <img 
+                    <Image 
                       src={author.avatar} 
                       alt={author.name}
+                      width={80}
+                      height={80}
                       className="w-20 h-20 rounded-full mx-auto mb-4 object-cover"
                     />
                   ) : (

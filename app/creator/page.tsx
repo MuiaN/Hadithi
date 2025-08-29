@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { contentApi } from '@/lib/api/contentApi';
 import useStore from '@/lib/store/useStore';
+import Image from 'next/image';
 
 interface ContentItem {
   id: string;
@@ -273,9 +274,11 @@ export default function CreatorDashboard() {
                   style={{ backgroundColor: 'var(--color-backgroundSecondary)', borderColor: 'var(--color-border)' }}
                 >
                   <div className="flex items-start space-x-4 flex-1">
-                    <img 
+                    <Image 
                       src={item.coverImage} 
                       alt={item.title}
+                      width={64}
+                      height={64}
                       className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
                     />
                     <div className="flex-1 min-w-0">

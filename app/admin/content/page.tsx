@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { FileText, Eye, Edit, Trash2, Plus, Search, Filter } from 'lucide-react';
 import { content } from '@/lib/mockData/content';
 import useStore from '@/lib/store/useStore';
@@ -261,14 +262,16 @@ export default function AdminContentPage() {
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y" style={{ divideColor: 'var(--color-border)' }}>
+            <tbody className="divide-y" style={{ outlineColor: 'var(--color-border)' }}>
               {filteredContent.map((item) => (
                 <tr key={item.id} className="hover:bg-opacity-50" style={{ backgroundColor: 'transparent' }}>
                   <td className="px-6 py-4">
                     <div className="flex items-center space-x-3">
-                      <img
+                      <Image
                         src={item.coverImage}
                         alt={item.title}
+                        width={48}
+                        height={48}
                         className="w-12 h-12 rounded-lg object-cover"
                       />
                       <div>
