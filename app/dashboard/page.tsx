@@ -18,6 +18,7 @@ import {
 import { contentApi } from '@/lib/api/contentApi';
 import { subscriptionApi } from '@/lib/api/subscriptionApi';
 import useStore from '@/lib/store/useStore';
+import Image from 'next/image';
 
 interface ContentItem {
   id: string;
@@ -209,9 +210,11 @@ export default function UserDashboard() {
                     style={{ backgroundColor: 'var(--color-card)', border: '1px solid var(--color-border)' }}
                   >
                     <div className="flex space-x-4">
-                      <img 
+                      <Image 
                         src={item.coverImage} 
                         alt={item.title}
+                        width={64}
+                        height={64}
                         className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
                       />
                       <div className="flex-1 min-w-0">

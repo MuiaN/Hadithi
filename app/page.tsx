@@ -129,7 +129,7 @@ export default function Home() {
   useEffect(() => {
     const timer = setInterval(() => {
       setLatestSlide((prev) => (prev + 1) % Math.ceil(latestContent.length / 3));
-    }, 4000);
+    }, 10000);
     return () => clearInterval(timer);
   }, [latestContent.length]);
 

@@ -2,6 +2,7 @@
 const nextConfig = {
   output: 'export',
   reactStrictMode: false,
+  trailingSlash: true,
   eslint: {
     ignoreDuringBuilds: true,
   },
