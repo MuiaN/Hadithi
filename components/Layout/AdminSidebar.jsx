@@ -61,6 +61,11 @@ export default function AdminSidebar() {
       label: 'Analytics'
     },
     {
+      href: '/admin/galleries',
+      icon: Shield,
+      label: 'Galleries'
+    },
+    {
       href: '/admin/comments',
       icon: MessageSquare,
       label: 'Comments'

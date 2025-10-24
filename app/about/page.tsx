@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { Users, Heart, Globe, BookOpen, Target, Award } from 'lucide-react';
 
 export default function AboutPage() {
@@ -81,10 +82,12 @@ export default function AboutPage() {
               </div>
             </div>
             <div className="relative">
-              <img 
-                src="https://images.pexels.com/photos/6147366/pexels-photo-6147366.jpeg?auto=compress&cs=tinysrgb&w=800"
+              <Image
+                src="/images/Kikuyu People.jpg"
                 alt="African storytelling"
-                className="rounded-lg shadow-lg w-full"
+                width={1200}
+                height={800}
+                className="rounded-lg shadow-lg w-full object-cover"
               />
             </div>
           </div>
@@ -181,9 +184,11 @@ export default function AboutPage() {
               }
             ].map((member) => (
               <div key={member.name} className="card text-center p-6" style={{ backgroundColor: 'var(--color-card)', border: '1px solid var(--color-border)' }}>
-                <img 
+                <Image 
                   src={member.image} 
                   alt={member.name}
+                  width={96}
+                  height={96}
                   className="w-24 h-24 rounded-full mx-auto mb-4 object-cover"
                 />
                 <h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--color-textPrimary)' }}>

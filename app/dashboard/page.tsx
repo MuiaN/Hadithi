@@ -307,7 +307,7 @@ export default function UserDashboard() {
                 </Link>
                 
                 <Link
-                  href="/settings"
+                  href="/dashboard/settings"
                   className="flex items-center space-x-3 p-3 rounded-lg transition-colors hover:bg-opacity-50"
                   style={{ backgroundColor: 'var(--color-backgroundSecondary)' }}
                 >

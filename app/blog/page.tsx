@@ -38,12 +38,12 @@ export default function BlogPage() {
         excerpt: 'We\'re excited to announce new audio capabilities that bring African stories to life through immersive sound experiences.',
         content: 'Full blog post content here...',
         author: 'Hadithi Team',
-        authorAvatar: 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop',
+        authorAvatar: '/images/Pic 5.jpg',
         publishedAt: '2024-02-15T10:00:00.000Z',
         readingTime: '5 min read',
         views: 1240,
         category: 'platform-updates',
-        coverImage: 'https://images.pexels.com/photos/6147366/pexels-photo-6147366.jpeg?auto=compress&cs=tinysrgb&w=800',
+        coverImage: '/images/The Karachuonyo Dancers.jpg',
         tags: ['audio', 'features', 'storytelling']
       },
       {
@@ -52,12 +52,12 @@ export default function BlogPage() {
         excerpt: 'Join us in celebrating the incredible contributions from our community during African Heritage Month.',
         content: 'Full blog post content here...',
         author: 'Amara Kone',
-        authorAvatar: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop',
+        authorAvatar: '/images/1991 Africa, Savoti - Chobe_03_001.JPG',
         publishedAt: '2024-02-12T14:00:00.000Z',
         readingTime: '7 min read',
         views: 892,
         category: 'community',
-        coverImage: 'https://images.pexels.com/photos/7014337/pexels-photo-7014337.jpeg?auto=compress&cs=tinysrgb&w=800',
+        coverImage: '/images/Some of the 1,200 dancers who took part in the ceremonies in the Independence Arena.jpg',
         tags: ['heritage', 'community', 'celebration']
       },
       {
@@ -66,12 +66,12 @@ export default function BlogPage() {
         excerpt: 'Exploring how technology can help preserve and share African oral traditions for future generations.',
         content: 'Full blog post content here...',
         author: 'Kwame Asante',
-        authorAvatar: 'https://images.pexels.com/photos/1181519/pexels-photo-1181519.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop',
+        authorAvatar: '/images/An Old Kikuyu Guard.jpg',
         publishedAt: '2024-02-10T09:00:00.000Z',
         readingTime: '8 min read',
         views: 1456,
         category: 'culture',
-        coverImage: 'https://images.pexels.com/photos/8828431/pexels-photo-8828431.jpeg?auto=compress&cs=tinysrgb&w=800',
+        coverImage: '/images/Luo dancers from Nyanza.jpg',
         tags: ['oral-traditions', 'technology', 'preservation']
       },
       {
@@ -80,12 +80,12 @@ export default function BlogPage() {
         excerpt: 'How African storytelling traditions can help build more inclusive and connected communities worldwide.',
         content: 'Full blog post content here...',
         author: 'Fatima Okafor',
-        authorAvatar: 'https://images.pexels.com/photos/1181686/pexels-photo-1181686.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop',
+        authorAvatar: '/images/Kisumu women balancing eggs.jpg',
         publishedAt: '2024-02-08T16:00:00.000Z',
         readingTime: '6 min read',
         views: 734,
         category: 'community',
-        coverImage: 'https://images.pexels.com/photos/5214413/pexels-photo-5214413.jpeg?auto=compress&cs=tinysrgb&w=800',
+        coverImage: '/images/Kikuyu People.jpg',
         tags: ['community', 'inclusion', 'storytelling']
       },
       {
@@ -94,12 +94,12 @@ export default function BlogPage() {
         excerpt: 'We\'ve improved our search functionality to help you discover African stories more easily.',
         content: 'Full blog post content here...',
         author: 'Hadithi Team',
-        authorAvatar: 'https://images.pexels.com/photos/2379004/pexels-photo-2379004.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop',
+        authorAvatar: '/images/Pic 5.jpg',
         publishedAt: '2024-02-05T11:00:00.000Z',
         readingTime: '4 min read',
         views: 567,
         category: 'platform-updates',
-        coverImage: 'https://images.pexels.com/photos/4577735/pexels-photo-4577735.jpeg?auto=compress&cs=tinysrgb&w=800',
+        coverImage: '/images/1991 Africa, Hwange_04_002.JPG',
         tags: ['platform', 'search', 'updates']
       }
     ];

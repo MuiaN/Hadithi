@@ -73,7 +73,7 @@ export default function Home() {
             title: 'Voices of the Ancestors',
             author: 'Kwame Asante',
             description: 'Exploring ancient African wisdom through oral traditions and storytelling.',
-            coverImage: 'https://images.pexels.com/photos/6147366/pexels-photo-6147366.jpeg?auto=compress&cs=tinysrgb&w=400',
+            coverImage: '/images/The Karachuonyo Dancers.jpg',
             duration: '45:32',
             audioUrl: '#',
             publishedAt: '2024-02-15T10:00:00.000Z',
@@ -85,7 +85,7 @@ export default function Home() {
             title: 'Ubuntu Philosophy Today',
             author: 'Amara Kone',
             description: 'How ancient African philosophy applies to modern community building.',
-            coverImage: 'https://images.pexels.com/photos/7014337/pexels-photo-7014337.jpeg?auto=compress&cs=tinysrgb&w=400',
+            coverImage: '/images/Kikuyu People.jpg',
             duration: '38:15',
             audioUrl: '#',
             publishedAt: '2024-02-12T14:00:00.000Z',
@@ -97,7 +97,7 @@ export default function Home() {
             title: 'The Griot Tradition',
             author: 'Fatima Okafor',
             description: 'Understanding the role of griots as keepers of African history and culture.',
-            coverImage: 'https://images.pexels.com/photos/8828431/pexels-photo-8828431.jpeg?auto=compress&cs=tinysrgb&w=400',
+            coverImage: '/images/Luo dancers from Nyanza.jpg',
             duration: '52:18',
             audioUrl: '#',
             publishedAt: '2024-02-10T16:00:00.000Z',
@@ -173,19 +173,19 @@ export default function Home() {
     {
       title: "Discover the Rich Tapestry of African Stories",
       subtitle: "Immerse yourself in centuries of wisdom, folklore, and cultural heritage",
-      image: "https://images.pexels.com/photos/6147366/pexels-photo-6147366.jpeg?auto=compress&cs=tinysrgb&w=1920&h=1080&fit=crop",
+      image: "/images/Kikuyu People.jpg",
       cta: "Explore Stories"
     },
     {
       title: "Listen to Ancient Wisdom Through Modern Podcasts",
       subtitle: "Experience African stories through immersive audio narratives",
-      image: "https://images.pexels.com/photos/7014337/pexels-photo-7014337.jpeg?auto=compress&cs=tinysrgb&w=1920&h=1080&fit=crop",
+      image: "/images/The Karachuonyo Dancers.jpg",
       cta: "Listen Now"
     },
     {
       title: "Join Our Growing Community of Storytellers",
       subtitle: "Share your stories and connect with fellow cultural preservationists",
-      image: "https://images.pexels.com/photos/8828431/pexels-photo-8828431.jpeg?auto=compress&cs=tinysrgb&w=1920&h=1080&fit=crop",
+      image: "/images/Some of the 1,200 dancers who took part in the ceremonies in the Independence Arena.jpg",
       cta: "Join Community"
     }
   ];
@@ -745,8 +745,7 @@ export default function Home() {
                 Create Free Account
               </Link>
               <Link
-                href="/subscription"
-                className="px-8 py-4 border-2 border-white text-white font-semibold rounded-lg hover:bg-white transition-colors"
+                href="/dashboard/subscription"
                 style={{ 
                   borderColor: 'white',
                   color: 'white'

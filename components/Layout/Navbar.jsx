@@ -48,8 +48,9 @@ export default function Navbar() {
     { href: '/podcasts', label: 'Podcasts' },
     { href: '/books', label: 'Books' },
     { href: '/articles', label: 'Articles' },
+    { href: '/galleries', label: 'Galleries' },
     { href: '/about', label: 'About' },
-    { href: '/contact', label: 'Contact' }
+    { href: '/contact', label: 'Contact' }    
   ];
 
   const isActiveLink = (href) => {
@@ -211,7 +212,7 @@ export default function Navbar() {
                     </Link>
 
                     <Link
-                      href="/settings"
+                      href="/dashboard/settings"
                       className="flex items-center space-x-2 px-4 py-2 text-sm transition-colors duration-200"
                       style={{ color: 'var(--color-textPrimary)' }}
                       onMouseEnter={(e) => {

@@ -17,6 +17,7 @@ import {
   CheckCircle,
   ChevronLeft,
   ChevronRight,
+  Shield,
   LogOut
 } from 'lucide-react';
 import useStore from '@/lib/store/useStore';
@@ -78,6 +79,11 @@ export default function CreatorSidebar() {
       href: '/creator/analytics',
       icon: BarChart3,
       label: 'Analytics'
+    },
+    {
+      href: '/creator/galleries',
+      icon: Shield,
+      label: 'Galleries'
     },
     {
       href: '/creator/comments',

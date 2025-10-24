@@ -46,27 +46,27 @@ export default function UserSidebar() {
       exact: true
     },
     {
-      href: '/profile',
+      href: '/dashboard/profile',
       icon: User,
       label: 'Profile'
     },
     {
-      href: '/favorites',
+      href: '/dashboard/favorites',
       icon: Heart,
       label: 'Favorites'
     },
     {
-      href: '/reading-history',
+      href: '/dashboard/reading-history',
       icon: BookOpen,
       label: 'Reading History'
     },
     {
-      href: '/subscription',
+      href: '/dashboard/subscription',
       icon: Crown,
       label: 'Subscription'
     },
     {
-      href: '/settings',
+      href: '/dashboard/settings',
       icon: Settings,
       label: 'Settings'
     }
