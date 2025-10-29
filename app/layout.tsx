@@ -62,7 +62,7 @@ export default function RootLayout({
         <title>Hadithi Platform - African Stories & Cultural Heritage</title>
         <meta name="description" content="Discover and preserve African stories, knowledge, and cultural heritage through our comprehensive digital platform." />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="/favicon.ico" />
+        <link rel="icon" href="/Hadithi Logo No BG.png" />
       </head>
       <body 
         className={`${inter.className} min-h-screen theme-${currentTheme} template-${currentTemplate}`} 
