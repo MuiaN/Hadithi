@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import useStore from '@/lib/store/useStore';
 import { authApi } from '@/lib/api/authApi';
+import Image from 'next/image';
 
 export default function AdminSidebar() {
   const [collapsed, setCollapsed] = useState(false);
@@ -97,42 +98,16 @@ export default function AdminSidebar() {
         borderRight: '1px solid var(--color-border)'
       }}
     >
-      {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b" style={{ borderColor: 'var(--color-border)' }}>
-        {!collapsed && (
-          <div className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">H</span>
-            </div>
-            <span className="font-bold text-lg" style={{ color: 'var(--color-textPrimary)' }}>
-              Admin
-            </span>
-          </div>
-        )}
-        
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="p-2 rounded-lg transition-colors"
-          style={{ color: 'var(--color-textSecondary)' }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = 'var(--color-backgroundSecondary)';
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = 'transparent';
-          }}
-        >
-          {collapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
-        </button>
-      </div>
-
       {/* User Info */}
-      {!collapsed && (
-        <div className="p-4 border-b" style={{ borderColor: 'var(--color-border)' }}>
-          <div className="flex items-center space-x-3">
+      <div className="p-4 border-b flex items-center justify-between" style={{ borderColor: 'var(--color-border)' }}>
+        {!collapsed ? (
+          <div className="flex items-center space-x-3 flex-1 min-w-0">
             {user?.avatar ? (
-              <img 
+              <Image 
                 src={user.avatar} 
-                alt={user.name} 
+                alt={user.name || 'User avatar'}
+                width={40}
+                height={40}
                 className="w-10 h-10 rounded-full object-cover"
               />
             ) : (
@@ -151,6 +126,43 @@ export default function AdminSidebar() {
               </p>
             </div>
           </div>
+        ) : (
+          <div className="flex items-center justify-center w-full">
+            {user?.avatar ? (
+              <Image 
+                src={user.avatar} 
+                alt={user.name || 'User avatar'}
+                width={40}
+                height={40}
+                className="w-10 h-10 rounded-full object-cover"
+              />
+            ) : null}
+          </div>
+        )}
+        {!collapsed && (
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="p-2 rounded-lg transition-colors"
+            style={{ color: 'var(--color-textSecondary)' }}
+          >
+            <ChevronLeft size={20} />
+          </button>
+        )}
+      </div>
+
+      {/* Collapse/Expand button */}
+      {collapsed && (
+        <div className="p-4 border-b" style={{ borderColor: 'var(--color-border)' }}>
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="flex items-center justify-center w-full h-10 px-3 py-2 rounded-lg transition-colors hover:shadow-sm"
+            style={{ color: 'var(--color-textSecondary)' }}
+            onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'var(--color-backgroundSecondary)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; }}
+            title="Expand Sidebar"
+          >
+            <ChevronRight size={20} />
+          </button>
         </div>
       )}
 

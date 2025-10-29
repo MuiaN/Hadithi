@@ -77,10 +77,14 @@ export default function Navbar() {
               className="flex items-center space-x-2 text-2xl font-bold transition-colors duration-300"
               style={{ color: 'var(--color-primary)' }}
             >
-              <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-orange-600 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-sm">H</span>
-              </div>
-              <span>Hadithi</span>
+              <Image
+                src="/Hadithi Logo No BG original.png"
+                alt="Hadithi Logo"
+                width={32}
+                height={32}
+                className="h-12 w-auto"
+              />
+              {/* <span>Hadithi</span> */}
             </Link>
           </div>
 
