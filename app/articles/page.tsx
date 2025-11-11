@@ -3,9 +3,10 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Search, Filter, Heart, Eye, Clock, FileText, Calendar } from 'lucide-react';
+import { Search, Filter, Heart, Eye, Clock, FileText, Calendar, Grid, List, Tag } from 'lucide-react';
 import { contentApi } from '@/lib/api/contentApi';
 import useStore from '@/lib/store/useStore';
+import { Badge } from '@/components/ui/badge';
 
 // Define interfaces for our data structures
 interface Article {
@@ -47,6 +48,7 @@ export default function ArticlesPage() {
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
   const [tags, setTags] = useState<string[]>([]);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const { user, contentFilters, updateContentFilters } = useStore();
 
   useEffect(() => {
@@ -166,7 +168,30 @@ export default function ArticlesPage() {
             </div>
 
             {/* Sort Options */}
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-4 flex-wrap">
+              {/* View Mode Toggle */}
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setViewMode('grid')}
+                  className={`p-2 rounded-lg transition-colors ${
+                    viewMode === 'grid' 
+                      ? 'bg-blue-100 text-blue-600' 
+                      : 'hover:bg-gray-100'
+                  }`}
+                >
+                  <Grid size={18} />
+                </button>
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`p-2 rounded-lg transition-colors ${
+                    viewMode === 'list' 
+                      ? 'bg-blue-100 text-blue-600' 
+                      : 'hover:bg-gray-100'
+                  }`}
+                >
+                  <List size={18} />
+                </button>
+              </div>
               <span className="text-sm font-medium flex items-center" style={{ color: 'var(--color-textPrimary)' }}>
                 <Filter size={16} className="mr-1" />
                 Sort:
@@ -199,69 +224,59 @@ export default function ArticlesPage() {
 
         {/* Articles List */}
         {loading ? (
-          <div className="space-y-6">
-            {[...Array(5)].map((_, i) => (
-              <div key={i} className="card p-6 animate-pulse" style={{ backgroundColor: 'var(--color-card)' }}>
-                <div className="flex space-x-4">
-                  <div className="w-24 h-24 rounded-lg" style={{ backgroundColor: 'var(--color-backgroundSecondary)' }}></div>
-                  <div className="flex-1 space-y-2">
-                    <div className="h-4 rounded" style={{ backgroundColor: 'var(--color-backgroundSecondary)' }}></div>
-                    <div className="h-4 rounded w-3/4" style={{ backgroundColor: 'var(--color-backgroundSecondary)' }}></div>
-                    <div className="h-3 rounded w-1/2" style={{ backgroundColor: 'var(--color-backgroundSecondary)' }}></div>
-                  </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="card rounded-lg shadow-md overflow-hidden animate-pulse" style={{ backgroundColor: 'var(--color-card)' }}>
+                <div className="h-48" style={{ backgroundColor: 'var(--color-backgroundSecondary)' }}></div>
+                <div className="p-6">
+                  <div className="h-4 rounded mb-2" style={{ backgroundColor: 'var(--color-backgroundSecondary)' }}></div>
+                  <div className="h-4 rounded w-2/3 mb-4" style={{ backgroundColor: 'var(--color-backgroundSecondary)' }}></div>
+                  <div className="h-3 rounded w-1/2" style={{ backgroundColor: 'var(--color-backgroundSecondary)' }}></div>
                 </div>
               </div>
             ))}
           </div>
         ) : articles.length > 0 ? (
-          <div className="space-y-6">
-            {articles.map((article) => (
-              <Link
-                key={article.id}
-                href={`/content/${article.id}`}
-                className="card group block p-6 transition-all duration-300 hover:shadow-lg"
-                style={{ backgroundColor: 'var(--color-card)' }}
-              >
-                <div className="flex space-x-6">
-                  <div className="flex-shrink-0">
-                    <Image 
-                      src={article.coverImage} 
+          viewMode === 'grid' ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {articles.map((article) => (
+                <Link
+                  key={article.id}
+                  href={`/content/${article.id}`}
+                  className="card group overflow-hidden transition-all duration-300 hover:scale-105 cursor-pointer"
+                  style={{ backgroundColor: 'var(--color-card)' }}
+                >
+                  <div className="relative h-48 overflow-hidden">
+                    <Image
+                      src={article.coverImage}
                       alt={article.title}
-                      width={128}
-                      height={96}
-                      className="w-32 h-24 rounded-lg object-cover"
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      width={400}
+                      height={192}
                     />
                   </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <span className="px-2 py-1 text-xs font-semibold rounded capitalize" style={{ backgroundColor: 'var(--color-secondary)', color: 'white' }}>
-                        Article
-                      </span>
-                      <span className="flex items-center text-xs" style={{ color: 'var(--color-textSecondary)' }}>
-                        <Calendar size={12} className="mr-1" />
-                        {formatDate(article.publishedAt)}
-                      </span>
-                      <span className="flex items-center text-xs" style={{ color: 'var(--color-textSecondary)' }}>
-                        <Clock size={12} className="mr-1" />
-                        {article.readingTime}
-                      </span>
-                    </div>
-                    
-                    <h3 className="text-xl font-semibold group-hover:text-amber-600 transition-colors mb-2 line-clamp-2" style={{ color: 'var(--color-textPrimary)' }}>
+                  <div className="p-6">
+                    <h3 className="text-xl font-semibold mb-2 transition-colors line-clamp-2" style={{ color: 'var(--color-textPrimary)' }}>
                       {article.title}
                     </h3>
-                    
+                    <div className="flex items-center space-x-4 text-xs mb-2" style={{ color: 'var(--color-textSecondary)' }}>
+                      <span className="flex items-center space-x-1">
+                        <Calendar size={12} className="mr-1" />
+                        <span>{formatDate(article.publishedAt)}</span>
+                      </span>
+                      <span className="flex items-center space-x-1">
+                        <Clock size={12} className="mr-1" />
+                        <span>{article.readingTime}</span>
+                      </span>
+                    </div>
                     <p className="mb-4 line-clamp-3" style={{ color: 'var(--color-textSecondary)' }}>
                       {article.description}
                     </p>
-                    
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm" style={{ color: 'var(--color-textPrimary)' }}>
-                        By {article.author}
+                    <div className="flex items-center justify-between text-sm" style={{ color: 'var(--color-textSecondary)' }}>
+                      <span className="flex items-center space-x-1">
+                        <span>By {article.author}</span>
                       </span>
-                      
-                      <div className="flex items-center space-x-4 text-sm" style={{ color: 'var(--color-textSecondary)' }}>
+                      <div className="flex items-center space-x-4">
                         <span className="flex items-center space-x-1">
                           <Heart size={14} />
                           <span>{formatNumber(article.likes)}</span>
@@ -273,10 +288,84 @@ export default function ArticlesPage() {
                       </div>
                     </div>
                   </div>
-                </div>
-              </Link>
-            ))}
-          </div>
+                  {article.tags.length > 0 && (
+                    <div className="px-6 pb-4 flex flex-wrap gap-2">
+                      {article.tags.slice(0, 4).map((tag, index) => (
+                        <Badge key={index} variant="outline" className="text-xs">
+                          <Tag className="w-3 h-3 mr-1" />
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {articles.map((article) => (
+                <Link
+                  key={article.id}
+                  href={`/content/${article.id}`}
+                  className="card group block p-6 transition-all duration-300 hover:shadow-lg"
+                  style={{ backgroundColor: 'var(--color-card)' }}
+                >
+                  <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-6">
+                    <div className="flex-shrink-0 sm:w-48">
+                      <Image 
+                        src={article.coverImage} 
+                        alt={article.title}
+                        width={192}
+                        height={128}
+                        className="w-full h-32 sm:h-full rounded-lg object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <span className="px-2 py-1 text-xs font-semibold rounded capitalize" style={{ backgroundColor: 'var(--color-secondary)', color: 'white' }}>
+                          Article
+                        </span>
+                        <span className="flex items-center text-xs" style={{ color: 'var(--color-textSecondary)' }}>
+                          <Calendar size={12} className="mr-1" />
+                          {formatDate(article.publishedAt)}
+                        </span>
+                        <span className="flex items-center text-xs" style={{ color: 'var(--color-textSecondary)' }}>
+                          <Clock size={12} className="mr-1" />
+                          {article.readingTime}
+                        </span>
+                      </div>
+                      
+                      <h3 className="text-xl font-semibold group-hover:text-amber-600 transition-colors mb-2 line-clamp-2" style={{ color: 'var(--color-textPrimary)' }}>
+                        {article.title}
+                      </h3>
+                      
+                      <p className="mb-4 line-clamp-2 sm:line-clamp-3" style={{ color: 'var(--color-textSecondary)' }}>
+                        {article.description}
+                      </p>
+                      
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm" style={{ color: 'var(--color-textPrimary)' }}>
+                          By {article.author}
+                        </span>
+                        
+                        <div className="flex items-center space-x-4 text-sm" style={{ color: 'var(--color-textSecondary)' }}>
+                          <span className="flex items-center space-x-1">
+                            <Heart size={14} />
+                            <span>{formatNumber(article.likes)}</span>
+                          </span>
+                          <span className="flex items-center space-x-1">
+                            <Eye size={14} />
+                            <span>{formatNumber(article.views)}</span>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )
         ) : (
           <div className="text-center py-12">
             <div className="w-24 h-24 mx-auto mb-4 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--color-backgroundSecondary)' }}>

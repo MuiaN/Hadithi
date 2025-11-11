@@ -286,60 +286,52 @@ export default function GalleriesPage() {
         ) : viewMode === 'grid' ? (
           // Grid View
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredGalleries.map((gallery) => {
-              const author = getAuthorInfo(gallery.created_by);
-              
-              return (
-                <Card
-                  key={gallery.id}
-                  className="overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer group"
-                  style={{ backgroundColor: 'var(--color-card)' }}
-                  onClick={() => openGallery(gallery)}
-                >
-                  <div className="aspect-video bg-gray-200 relative overflow-hidden">
-                    {gallery.images.length > 0 ? (
-                      <>
-                        <Image
-                          src={gallery.images[0].url}
-                          alt={gallery.images[0].alt}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                          width={400}
-                          height={225}
-                        />
-                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-300 flex items-center justify-center">
-                          <div className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                            <Eye className="w-8 h-8" />
-                          </div>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="flex items-center justify-center h-full" style={{ color: 'var(--color-textSecondary)' }}>
-                        No images
-                      </div>
-                    )}
-                    <div className="absolute top-3 right-3">
-                      <Badge 
-                        className="shadow-sm font-medium text-white"
-                        style={{ 
-                          background: 'var(--gradient-primary)'
-                        }}
-                      >
-                        {gallery.images.length} {gallery.images.length === 1 ? 'image' : 'images'}
-                      </Badge>
+            {filteredGalleries.map((gallery) => (
+              <div
+                key={gallery.id}
+                onClick={() => openGallery(gallery)}
+                className="card group overflow-hidden transition-all duration-300 hover:scale-105 cursor-pointer"
+                style={{ backgroundColor: 'var(--color-card)' }}
+              >
+                <div className="relative h-48 overflow-hidden">
+                  {gallery.images.length > 0 ? (
+                    <Image
+                      src={gallery.images[0].url}
+                      alt={gallery.images[0].alt}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      width={400}
+                      height={192}
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-full" style={{ color: 'var(--color-textSecondary)' }}>
+                      No images
                     </div>
+                  )}
+                  <div className="absolute top-4 left-4">
+                    <Badge 
+                      className="shadow-sm font-medium text-white"
+                      style={{ background: 'var(--gradient-primary)' }}
+                    >
+                      {gallery.images.length} {gallery.images.length === 1 ? 'image' : 'images'}
+                    </Badge>
                   </div>
-                  <CardHeader>
-                    <CardTitle className="line-clamp-2" style={{ color: 'var(--color-textPrimary)' }}>
-                      {gallery.title}
-                    </CardTitle>
-                    <CardDescription className="line-clamp-3" style={{ color: 'var(--color-textSecondary)' }}>
-                      {gallery.description || 'No description'}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between text-sm" style={{ color: 'var(--color-textSecondary)' }}>
-                        <div className="flex items-center gap-4">
+                </div>
+                
+                <div className="p-6">
+                  <h3 className="text-xl font-semibold mb-2 transition-colors line-clamp-2" style={{ color: 'var(--color-textPrimary)' }}>
+                    {gallery.title}
+                  </h3>
+                  
+                  <p className="mb-4 line-clamp-3" style={{ color: 'var(--color-textSecondary)' }}>
+                    {gallery.description || 'No description available'}
+                  </p>
+                  
+                  <div className="flex items-center justify-between text-sm" style={{ color: 'var(--color-textSecondary)' }}>
+                    <span className="flex items-center space-x-1">
+                      {getAuthorInfo(gallery.created_by) && <span>By {getAuthorInfo(gallery.created_by)?.name}</span>}
+                    </span>
+                    
+                    <div className="flex items-center space-x-4">
                           <div className="flex items-center gap-1">
                             <Eye className="w-4 h-4" />
                             <span>{formatNumber(gallery.view_count)}</span>
@@ -350,34 +342,21 @@ export default function GalleriesPage() {
                               <span>{formatDate(gallery.published_at)}</span>
                             </div>
                           )}
-                        </div>
-                        {author && (
-                          <div className="flex items-center gap-1 text-xs">
-                            <User className="w-3 h-3" />
-                            <span>{author.name}</span>
-                          </div>
-                        )}
-                      </div>
-                      {gallery.tags.length > 0 && (
-                        <div className="flex flex-wrap gap-2">
-                          {gallery.tags.slice(0, 3).map((tag, index) => (
-                            <Badge key={index} variant="outline" className="text-xs">
-                              <Tag className="w-3 h-3 mr-1" />
-                              {tag}
-                            </Badge>
-                          ))}
-                          {gallery.tags.length > 3 && (
-                            <Badge variant="outline" className="text-xs">
-                              +{gallery.tags.length - 3} more
-                            </Badge>
-                          )}
-                        </div>
-                      )}
                     </div>
-                  </CardContent>
-                </Card>
-              );
-            })}
+                  </div>
+                </div>
+                {gallery.tags.length > 0 && (
+                  <div className="px-6 pb-4 flex flex-wrap gap-2">
+                    {gallery.tags.slice(0, 4).map((tag, index) => (
+                      <Badge key={index} variant="outline" className="text-xs">
+                        <Tag className="w-3 h-3 mr-1" />
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         ) : (
           // List View

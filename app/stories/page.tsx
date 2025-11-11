@@ -3,9 +3,10 @@
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Search, Filter, Heart, Eye, Clock, Tag } from 'lucide-react';
+import { Search, Filter, Heart, Eye, Clock, Tag, Grid, List, Calendar } from 'lucide-react';
 import { contentApi } from '@/lib/api/contentApi';
 import useStore from '@/lib/store/useStore';
+import { Badge } from '@/components/ui/badge';
 
 // Define TypeScript interfaces based on API response
 interface ApiStory {
@@ -94,6 +95,7 @@ export default function StoriesPage() {
   const [stories, setStories] = useState<Story[]>([]);
   const [loading, setLoading] = useState(true);
   const [tags, setTags] = useState<string[]>([]);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const { user, contentFilters, updateContentFilters } = useStore();
 
   useEffect(() => {
@@ -231,7 +233,30 @@ export default function StoriesPage() {
             </div>
 
             {/* Sort Options */}
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-4 flex-wrap">
+              {/* View Mode Toggle */}
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setViewMode('grid')}
+                  className={`p-2 rounded-lg transition-colors ${
+                    viewMode === 'grid' 
+                      ? 'bg-blue-100 text-blue-600' 
+                      : 'hover:bg-gray-100'
+                  }`}
+                >
+                  <Grid size={18} />
+                </button>
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`p-2 rounded-lg transition-colors ${
+                    viewMode === 'list' 
+                      ? 'bg-blue-100 text-blue-600' 
+                      : 'hover:bg-gray-100'
+                  }`}
+                >
+                  <List size={18} />
+                </button>
+              </div>
               <span className="text-sm font-medium flex items-center" style={{ color: 'var(--color-textPrimary)' }}>
                 <Filter size={16} className="mr-1" />
                 Sort:
@@ -278,101 +303,147 @@ export default function StoriesPage() {
             ))}
           </div>
         ) : stories.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {stories.map((story) => (
-              <Link
-                key={story.id}
-                href={`/content/${story.id}`}
-                className="card group overflow-hidden transition-all duration-300 hover:-translate-y-1 rounded-lg shadow-md"
-                style={{ backgroundColor: 'var(--color-card)' }}
-              >
-                <div className="relative h-48 overflow-hidden">
-                  <Image 
-                    src={story.coverImage} 
-                    alt={story.title}
-                    width={400}
-                    height={192}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
-                  
-                  <div className="absolute top-4 left-4">
-                    <span className="px-3 py-1 text-white text-xs font-semibold rounded-full" style={{ backgroundColor: 'var(--color-primary)' }}>
-                      Story
-                    </span>
-                  </div>
-                  
-                  {!story.isFree && (
-                    <div className="absolute top-4 right-4">
-                      <span className="px-2 py-1 text-white text-xs font-semibold rounded-full" style={{ background: 'var(--gradient-primary)' }}>
-                        Premium
-                      </span>
-                    </div>
-                  )}
-
-                  <div className="absolute bottom-4 left-4 right-4">
-                    <div className="flex items-center space-x-4 text-white text-xs">
-                      <span className="flex items-center space-x-1">
-                        <Clock size={12} />
-                        <span>{story.readingTime}</span>
-                      </span>
-                      <span>{formatDate(story.publishedAt)}</span>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="p-6">
-                  <h3 className="text-xl font-semibold mb-2 transition-colors line-clamp-2" style={{ color: 'var(--color-textPrimary)' }}>
-                    {story.title}
-                  </h3>
-                  
-                  <p className="mb-4 line-clamp-3" style={{ color: 'var(--color-textSecondary)' }}>
-                    {story.description}
-                  </p>
-                  
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-sm" style={{ color: 'var(--color-textPrimary)' }}>
-                      By {story.author}
-                    </span>
-                    
-                    <div className="flex items-center space-x-4 text-sm" style={{ color: 'var(--color-textSecondary)' }}>
-                      <span className="flex items-center space-x-1">
-                        <Heart size={14} />
-                        <span>{formatNumber(story.likes)}</span>
-                      </span>
-                      <span className="flex items-center space-x-1">
-                        <Eye size={14} />
-                        <span>{formatNumber(story.views)}</span>
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex flex-wrap gap-1">
-                    {story.tags.slice(0, 3).map((tag) => (
-                      <span
-                        key={tag}
-                        className="px-2 py-1 text-xs rounded"
-                        style={{ 
-                          backgroundColor: 'var(--color-backgroundSecondary)', 
-                          color: 'var(--color-textSecondary)' 
-                        }}
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                    {story.tags.length > 3 && (
-                      <span className="px-2 py-1 text-xs rounded" style={{ 
-                        backgroundColor: 'var(--color-backgroundSecondary)', 
-                        color: 'var(--color-textSecondary)' 
-                      }}>
-                        +{story.tags.length - 3} more
-                      </span>
+          viewMode === 'grid' ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {stories.map((story) => (
+                <Link
+                  key={story.id}
+                  href={`/content/${story.id}`}
+                  className="card group overflow-hidden transition-all duration-300 hover:scale-105 cursor-pointer"
+                  style={{ backgroundColor: 'var(--color-card)' }}
+                >
+                  <div className="relative h-48 overflow-hidden">
+                    <Image
+                      src={story.coverImage}
+                      alt={story.title}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      width={400}
+                      height={192}
+                    />
+                    {!story.isFree && (
+                      <div className="absolute top-4 right-4">
+                        <Badge className="shadow-sm font-medium text-white" style={{ background: 'var(--gradient-primary)' }}>
+                          Premium
+                        </Badge>
+                      </div>
                     )}
                   </div>
-                </div>
-              </Link>
-            ))}
-          </div>
+                  <div className="p-6">
+                    <h3 className="text-xl font-semibold mb-2 transition-colors line-clamp-2" style={{ color: 'var(--color-textPrimary)' }}>
+                      {story.title}
+                    </h3>
+                    <div className="flex items-center space-x-4 text-xs mb-2" style={{ color: 'var(--color-textSecondary)' }}>
+                      <span className="flex items-center space-x-1">
+                        <Calendar size={12} className="mr-1" />
+                        <span>{formatDate(story.publishedAt)}</span>
+                      </span>
+                      <span className="flex items-center space-x-1">
+                        <Clock size={12} className="mr-1" />
+                        <span>{story.readingTime}</span>
+                      </span>
+                    </div>
+                    <p className="mb-4 line-clamp-3" style={{ color: 'var(--color-textSecondary)' }}>
+                      {story.description}
+                    </p>
+                    <div className="flex items-center justify-between text-sm" style={{ color: 'var(--color-textSecondary)' }}>
+                      <span className="flex items-center space-x-1">
+                        <span>By {story.author}</span>
+                      </span>
+                      <div className="flex items-center space-x-4">
+                        <span className="flex items-center space-x-1">
+                          <Heart size={14} />
+                          <span>{formatNumber(story.likes)}</span>
+                        </span>
+                        <span className="flex items-center space-x-1">
+                          <Eye size={14} />
+                          <span>{formatNumber(story.views)}</span>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  {story.tags.length > 0 && (
+                    <div className="px-6 pb-4 flex flex-wrap gap-2">
+                      {story.tags.slice(0, 4).map((tag, index) => (
+                        <Badge key={index} variant="outline" className="text-xs">
+                          <Tag className="w-3 h-3 mr-1" />
+                          {tag}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {stories.map((story) => (
+                <Link
+                  key={story.id}
+                  href={`/content/${story.id}`}
+                  className="card group block p-6 transition-all duration-300 hover:shadow-lg"
+                  style={{ backgroundColor: 'var(--color-card)' }}
+                >
+                  <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-6">
+                    <div className="flex-shrink-0 sm:w-48">
+                      <Image 
+                        src={story.coverImage} 
+                        alt={story.title}
+                        width={192}
+                        height={128}
+                        className="w-full h-32 sm:h-full rounded-lg object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center space-x-2 mb-2">
+                        <Badge className="capitalize" style={{ backgroundColor: 'var(--color-info)', color: 'white' }}>
+                          Story
+                        </Badge>
+                        {!story.isFree && (
+                          <Badge className="shadow-sm font-medium text-white" style={{ background: 'var(--gradient-primary)' }}>
+                            Premium
+                          </Badge>
+                        )}
+                        <span className="flex items-center text-xs" style={{ color: 'var(--color-textSecondary)' }}>
+                          <Calendar size={12} className="mr-1" />
+                          {formatDate(story.publishedAt)}
+                        </span>
+                        <span className="flex items-center text-xs" style={{ color: 'var(--color-textSecondary)' }}>
+                          <Clock size={12} className="mr-1" />
+                          {story.readingTime}
+                        </span>
+                      </div>
+                      
+                      <h3 className="text-xl font-semibold group-hover:text-amber-600 transition-colors mb-2 line-clamp-2" style={{ color: 'var(--color-textPrimary)' }}>
+                        {story.title}
+                      </h3>
+                      
+                      <p className="mb-4 line-clamp-2 sm:line-clamp-3" style={{ color: 'var(--color-textSecondary)' }}>
+                        {story.description}
+                      </p>
+                      
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm" style={{ color: 'var(--color-textPrimary)' }}>
+                          By {story.author}
+                        </span>
+                        
+                        <div className="flex items-center space-x-4 text-sm" style={{ color: 'var(--color-textSecondary)' }}>
+                          <span className="flex items-center space-x-1">
+                            <Heart size={14} />
+                            <span>{formatNumber(story.likes)}</span>
+                          </span>
+                          <span className="flex items-center space-x-1">
+                            <Eye size={14} />
+                            <span>{formatNumber(story.views)}</span>
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )
         ) : (
           <div className="text-center py-12">
             <div className="w-24 h-24 mx-auto mb-4 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--color-backgroundSecondary)' }}>

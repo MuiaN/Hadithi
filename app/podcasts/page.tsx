@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { Search, Filter, Heart, Eye, Clock, Play, Pause, Volume2, Headphones } from 'lucide-react';
+import { Search, Filter, Heart, Eye, Clock, Play, Pause, Headphones, Grid, List, Tag } from 'lucide-react';
 import { contentApi } from '@/lib/api/contentApi';
 import useStore from '@/lib/store/useStore';
 import Image from 'next/image';
+import { Badge } from '@/components/ui/badge';
 
 interface PodcastItem {
   id: string;
@@ -27,6 +28,7 @@ export default function PodcastsPage() {
   const [loading, setLoading] = useState(true);
   const [tags, setTags] = useState<string[]>([]);
   const [playingPodcast, setPlayingPodcast] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const { user, contentFilters, updateContentFilters } = useStore();
 
   useEffect(() => {
@@ -251,7 +253,30 @@ export default function PodcastsPage() {
             </div>
 
             {/* Sort Options */}
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-4 flex-wrap">
+              {/* View Mode Toggle */}
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setViewMode('grid')}
+                  className={`p-2 rounded-lg transition-colors ${
+                    viewMode === 'grid' 
+                      ? 'bg-blue-100 text-blue-600' 
+                      : 'hover:bg-gray-100'
+                  }`}
+                >
+                  <Grid size={18} />
+                </button>
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`p-2 rounded-lg transition-colors ${
+                    viewMode === 'list' 
+                      ? 'bg-blue-100 text-blue-600' 
+                      : 'hover:bg-gray-100'
+                  }`}
+                >
+                  <List size={18} />
+                </button>
+              </div>
               <span className="text-sm font-medium flex items-center" style={{ color: 'var(--color-textPrimary)' }}>
                 <Filter size={16} className="mr-1" />
                 Sort:
@@ -287,7 +312,7 @@ export default function PodcastsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {[...Array(6)].map((_, i) => (
               <div key={i} className="card rounded-lg shadow-md overflow-hidden animate-pulse" style={{ backgroundColor: 'var(--color-card)' }}>
-                <div className="h-64" style={{ backgroundColor: 'var(--color-backgroundSecondary)' }}></div>
+                <div className="h-48" style={{ backgroundColor: 'var(--color-backgroundSecondary)' }}></div>
                 <div className="p-6">
                   <div className="h-4 rounded mb-2" style={{ backgroundColor: 'var(--color-backgroundSecondary)' }}></div>
                   <div className="h-4 rounded w-2/3 mb-4" style={{ backgroundColor: 'var(--color-backgroundSecondary)' }}></div>
@@ -297,102 +322,148 @@ export default function PodcastsPage() {
             ))}
           </div>
         ) : filteredPodcasts.length > 0 ? (
-          <div className="content-grid">
-            {filteredPodcasts.map((podcast) => (
-              <div
-                key={podcast.id}
-                className="podcast-card group overflow-hidden transition-all duration-300 hover:scale-105"
-                style={{ backgroundColor: 'var(--color-card)' }}
-              >
-                <div className="relative h-64 overflow-hidden">
-                  <Image
-                    src={podcast.coverImage}
-                    alt={podcast.title}
-                    className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                    width={384}
-                    height={216}
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
-                  
-                  {/* Play Button */}
-                  <button
-                    onClick={() => togglePodcastPlay(podcast.id)}
-                    className="absolute bottom-4 right-4 w-14 h-14 rounded-full flex items-center justify-center shadow-lg transition-all duration-300 hover:scale-110"
-                    style={{ backgroundColor: 'var(--color-primary)' }}
-                  >
-                    {playingPodcast === podcast.id ? (
-                      <Pause className="text-white" size={20} />
-                    ) : (
-                      <Play className="text-white ml-1" size={20} />
+          viewMode === 'grid' ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredPodcasts.map((podcast) => (
+                <Link
+                  key={podcast.id}
+                  href={`/content/${podcast.id}`}
+                  className="card group overflow-hidden transition-all duration-300 hover:scale-105 cursor-pointer"
+                  style={{ backgroundColor: 'var(--color-card)' }}
+                >
+                  <div className="relative h-48 overflow-hidden">
+                    <Image
+                      src={podcast.coverImage}
+                      alt={podcast.title}
+                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                      width={400}
+                      height={192}
+                    />
+                    <div 
+                      className="absolute top-4 right-4 px-2 py-1 rounded-full text-white text-xs font-medium shadow-md"
+                      style={{ backgroundColor: 'var(--color-primary)' }}
+                    >
+                      <Clock className="inline-block w-3 h-3 mr-1" />{podcast.duration}
+                    </div>
+                    {!podcast.isFree && (
+                      <div className="absolute top-4 left-4">
+                        <Badge className="shadow-sm font-medium text-white" style={{ background: 'var(--gradient-primary)' }}>
+                          Premium
+                        </Badge>
+                      </div>
                     )}
-                  </button>
-
-                  {/* Duration Badge */}
-                  <div className="absolute top-4 right-4 px-3 py-1 rounded-full text-white text-sm font-medium" style={{ backgroundColor: 'rgba(0, 0, 0, 0.7)' }}>
-                    {podcast.duration}
                   </div>
-
-                  {!podcast.isFree && (
-                    <div className="absolute top-4 left-4">
-                      <span className="px-2 py-1 text-white text-xs font-semibold rounded-full" style={{ background: 'var(--gradient-primary)' }}>
-                        Premium
+                  <div className="p-6">
+                    <h3 className="text-xl font-semibold mb-2 transition-colors line-clamp-2" style={{ color: 'var(--color-textPrimary)' }}>
+                      {podcast.title}
+                    </h3>
+                    <p className="mb-4 line-clamp-3" style={{ color: 'var(--color-textSecondary)' }}>
+                      {podcast.description}
+                    </p>
+                    <div className="flex items-center justify-between text-sm" style={{ color: 'var(--color-textSecondary)' }}>
+                      <span className="flex items-center space-x-1">
+                        <span>By {podcast.author}</span>
                       </span>
+                      <div className="flex items-center space-x-4">
+                        <span className="flex items-center space-x-1">
+                          <Heart size={14} />
+                          <span>{formatNumber(podcast.likes)}</span>
+                        </span>
+                        <span className="flex items-center space-x-1">
+                          <Eye size={14} />
+                          <span>{formatNumber(podcast.views)}</span>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  {podcast.tags.length > 0 && (
+                    <div className="px-6 pb-4 flex flex-wrap gap-2">
+                      {podcast.tags.slice(0, 4).map((tag, index) => (
+                        <Badge key={index} variant="outline" className="text-xs">
+                          <Tag className="w-3 h-3 mr-1" />
+                          {tag}
+                        </Badge>
+                      ))}
                     </div>
                   )}
-                </div>
-                
-                <div className="p-6">
-                  <h3 className="text-xl font-semibold mb-2 transition-colors line-clamp-2" style={{ color: 'var(--color-textPrimary)' }}>
-                    {podcast.title}
-                  </h3>
-                  
-                  <p className="mb-4 line-clamp-3" style={{ color: 'var(--color-textSecondary)' }}>
-                    {podcast.description}
-                  </p>
-                  
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-sm" style={{ color: 'var(--color-textPrimary)' }}>
-                      By {podcast.author}
-                    </span>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {filteredPodcasts.map((podcast) => (
+                <Link
+                  key={podcast.id}
+                  href={`/content/${podcast.id}`}
+                  className="card group block p-6 transition-all duration-300 hover:shadow-lg"
+                  style={{ backgroundColor: 'var(--color-card)' }}
+                >
+                  <div className="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-6">
+                    <div className="flex-shrink-0 sm:w-48 relative">
+                      <Image 
+                        src={podcast.coverImage} 
+                        alt={podcast.title}
+                        width={192}
+                        height={192}
+                        className="w-full h-48 sm:h-full rounded-lg object-cover group-hover:scale-105 transition-transform duration-300"
+                      />
+                      <div 
+                        className="absolute top-2 right-2 px-2 py-1 rounded-full text-white text-xs font-medium shadow-md"
+                        style={{ backgroundColor: 'var(--color-primary)' }}
+                      >
+                        <Clock className="inline-block w-3 h-3 mr-1" />{podcast.duration}
+                      </div>
+                    </div>
                     
-                    <div className="flex items-center space-x-4 text-sm" style={{ color: 'var(--color-textSecondary)' }}>
-                      <span className="flex items-center space-x-1">
-                        <Heart size={14} />
-                        <span>{formatNumber(podcast.likes)}</span>
-                      </span>
-                      <span className="flex items-center space-x-1">
-                        <Eye size={14} />
-                        <span>{formatNumber(podcast.views)}</span>
-                      </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center space-x-2 mb-2">
+                        {!podcast.isFree && (
+                          <Badge className="shadow-sm font-medium text-white" style={{ background: 'var(--gradient-primary)' }}>
+                            Premium
+                          </Badge>
+                        )}
+                      </div>
+                      
+                      <h3 className="text-xl font-semibold group-hover:text-amber-600 transition-colors mb-2 line-clamp-2" style={{ color: 'var(--color-textPrimary)' }}>
+                        {podcast.title}
+                      </h3>
+                      
+                      <p className="mb-4 line-clamp-2 sm:line-clamp-3" style={{ color: 'var(--color-textSecondary)' }}>
+                        {podcast.description}
+                      </p>
+                      
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm" style={{ color: 'var(--color-textPrimary)' }}>
+                          By {podcast.author}
+                        </span>
+                        
+                        <div className="flex items-center space-x-4 text-sm" style={{ color: 'var(--color-textSecondary)' }}>
+                          <span className="flex items-center space-x-1">
+                            <Heart size={14} />
+                            <span>{formatNumber(podcast.likes)}</span>
+                          </span>
+                          <span className="flex items-center space-x-1">
+                            <Eye size={14} />
+                            <span>{formatNumber(podcast.views)}</span>
+                          </span>
+                        </div>
+                      </div>
+
+                      {podcast.tags.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mt-4">
+                          {podcast.tags.slice(0, 3).map((tag, index) => (
+                            <Badge key={index} variant="outline" className="text-xs">
+                              {tag}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
-                  
-                  <div className="flex flex-wrap gap-1">
-                    {podcast.tags.slice(0, 3).map((tag) => (
-                      <span
-                        key={tag}
-                        className="px-2 py-1 text-xs rounded"
-                        style={{ 
-                          backgroundColor: 'var(--color-backgroundSecondary)', 
-                          color: 'var(--color-textSecondary)' 
-                        }}
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                    {podcast.tags.length > 3 && (
-                      <span className="px-2 py-1 text-xs rounded" style={{ 
-                        backgroundColor: 'var(--color-backgroundSecondary)', 
-                        color: 'var(--color-textSecondary)' 
-                      }}>
-                        +{podcast.tags.length - 3} more
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+                </Link>
+              ))}
+            </div>
+          )
         ) : (
           <div className="text-center py-12">
             <div className="w-24 h-24 mx-auto mb-4 rounded-full flex items-center justify-center" style={{ backgroundColor: 'var(--color-backgroundSecondary)' }}>
