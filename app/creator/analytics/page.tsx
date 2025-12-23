@@ -11,7 +11,6 @@ import {
   Users
 } from 'lucide-react';
 import Image from 'next/image';
-import { contentApi } from '@/lib/api/contentApi';
 import useStore from '@/lib/store/useStore';
 
 // Type definitions
@@ -27,15 +26,15 @@ interface AnalyticsData {
 interface ContentItem {
   id: string;
   title: string;
-  coverImage: string;
+  coverImage: string | null;
   views: number;
-  likes: number;
-  status?: string;
-}
-
-interface User {
-  id: string;
-  // Add other user properties as needed
+  rejectionReason: string | null; // Added rejectionReason
+  series?: {
+    id: string;
+    title: string;
+  } | null;
+  chapterNumber?: number;
+  _count: { likes: number };
 }
 
 export default function CreatorAnalyticsPage() {
@@ -54,37 +53,12 @@ export default function CreatorAnalyticsPage() {
 
   useEffect(() => {
     const loadAnalytics = async () => {
+      setLoading(true);
       try {
-        if (!user?.id) return;
-
-        const contentData = await contentApi.getAllContent({
-          author: user.id,
-          includeUnpublished: true
-        });
-
-        const content = contentData.content as ContentItem[];
-        const totalViews = content.reduce((sum: number, c: ContentItem) => sum + (c.views || 0), 0);
-        const totalLikes = content.reduce((sum: number, c: ContentItem) => sum + (c.likes || 0), 0);
-
-        // Mock views over time data
-        const viewsOverTime = [
-          { date: '2024-01-01', views: 120 },
-          { date: '2024-01-08', views: 180 },
-          { date: '2024-01-15', views: 250 },
-          { date: '2024-01-22', views: 320 },
-          { date: '2024-01-29', views: 410 },
-          { date: '2024-02-05', views: 520 },
-          { date: '2024-02-12', views: 680 }
-        ];
-
-        setAnalytics({
-          totalViews,
-          totalLikes,
-          totalComments: 45, // Mock data
-          contentCount: content.length,
-          topContent: content.sort((a: ContentItem, b: ContentItem) => (b.views || 0) - (a.views || 0)).slice(0, 5),
-          viewsOverTime
-        });
+        const res = await fetch(`/api/v1/creator/analytics?range=${timeRange}`);
+        if (!res.ok) throw new Error('Failed to load analytics');
+        const data = await res.json();
+        setAnalytics(data);
       } catch (error) {
         console.error('Error loading analytics:', error);
       } finally {
@@ -93,7 +67,7 @@ export default function CreatorAnalyticsPage() {
     };
 
     loadAnalytics();
-  }, [user, timeRange]);
+  }, [timeRange]);
 
   const formatNumber = (num: number) => {
     if (num >= 1000) {
@@ -257,7 +231,7 @@ export default function CreatorAnalyticsPage() {
                   {index + 1}
                 </div>
                 <Image
-                  src={item.coverImage}
+                  src={item.coverImage || '/images/placeholder.png'}
                   alt={item.title}
                   width={48}
                   height={48}
@@ -266,6 +240,12 @@ export default function CreatorAnalyticsPage() {
                 <div className="flex-1 min-w-0">
                   <h3 className="font-medium line-clamp-1" style={{ color: 'var(--color-textPrimary)' }}>
                     {item.title}
+                    {item.series && (
+                      <span className="ml-2 text-sm font-medium text-gray-500">
+                        ({item.series.title}
+                        {item.chapterNumber && ` - Chapter ${item.chapterNumber}`})
+                      </span>
+                    )}
                   </h3>
                   <div className="flex items-center space-x-4 text-xs" style={{ color: 'var(--color-textSecondary)' }}>
                     <span className="flex items-center space-x-1">
@@ -274,7 +254,7 @@ export default function CreatorAnalyticsPage() {
                     </span>
                     <span className="flex items-center space-x-1">
                       <Heart size={10} />
-                      <span>{formatNumber(item.likes)}</span>
+                      <span>{formatNumber(item._count.likes)}</span>
                     </span>
                   </div>
                 </div>

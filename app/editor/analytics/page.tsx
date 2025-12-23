@@ -10,15 +10,12 @@ import {
   Calendar,
   Filter
 } from 'lucide-react';
-import { contentApi } from '@/lib/api/contentApi';
-import useStore from '@/lib/store/useStore';
 import Image from 'next/image';
 
 interface AnalyticsData {
   totalContent: number;
   publishedContent: number;
   totalViews: number;
-  totalLikes: number;
   pendingReview: number;
   topContent: ContentItem[];
   reviewStats: { approved: number; rejected: number; pending: number };
@@ -27,11 +24,10 @@ interface AnalyticsData {
 interface ContentItem {
   id: string;
   title: string;
-  coverImage: string;
+  coverImage: string | null;
   views: number;
-  likes: number;
-  type: string;
-  author: string;
+  author: { name: string };
+  _count: { likes: number };
 }
 
 export default function EditorAnalyticsPage() {
@@ -39,7 +35,6 @@ export default function EditorAnalyticsPage() {
     totalContent: 0,
     publishedContent: 0,
     totalViews: 0,
-    totalLikes: 0,
     pendingReview: 0,
     topContent: [],
     reviewStats: { approved: 0, rejected: 0, pending: 0 }
@@ -47,38 +42,14 @@ export default function EditorAnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState('30d');
 
-  const { user } = useStore();
-
   useEffect(() => {
     const loadAnalytics = async () => {
       try {
-        const contentData = await contentApi.getAllContent({ includeUnpublished: true });
-        const content = contentData.content;
-
-        const published = content.filter((c: any) => c.status === 'published');
-        const pending = content.filter((c: any) => c.status === 'in-review');
-        const rejected = content.filter((c: any) => c.status === 'rejected');
-
-        const totalViews = published.reduce((sum: number, c: any) => sum + (c.views || 0), 0);
-        const totalLikes = published.reduce((sum: number, c: any) => sum + (c.likes || 0), 0);
-
-        const topContent = published
-          .sort((a: any, b: any) => (b.views || 0) - (a.views || 0))
-          .slice(0, 10);
-
-        setAnalytics({
-          totalContent: content.length,
-          publishedContent: published.length,
-          totalViews,
-          totalLikes,
-          pendingReview: pending.length,
-          topContent,
-          reviewStats: {
-            approved: published.length,
-            rejected: rejected.length,
-            pending: pending.length
-          }
-        });
+        // Fetch from the new dedicated analytics endpoint
+        const res = await fetch(`/api/v1/editor/analytics?range=${timeRange}`);
+        if (!res.ok) throw new Error('Failed to fetch analytics');
+        const data = await res.json();
+        setAnalytics(data);
       } catch (error) {
         console.error('Error loading analytics:', error);
       } finally {
@@ -267,7 +238,7 @@ export default function EditorAnalyticsPage() {
                   {index + 1}
                 </div>
                 <Image
-                  src={item.coverImage}
+                  src={item.coverImage || '/images/placeholder.png'}
                   alt={item.title}
                   width={48}
                   height={48}
@@ -278,14 +249,14 @@ export default function EditorAnalyticsPage() {
                     {item.title}
                   </h3>
                   <div className="flex items-center space-x-4 text-xs" style={{ color: 'var(--color-textSecondary)' }}>
-                    <span>By {item.author}</span>
+                    <span>By {item.author.name}</span>
                     <span className="flex items-center space-x-1">
                       <Eye size={10} />
                       <span>{formatNumber(item.views)}</span>
                     </span>
                     <span className="flex items-center space-x-1">
                       <Heart size={10} />
-                      <span>{formatNumber(item.likes)}</span>
+                      <span>{formatNumber(item._count.likes)}</span>
                     </span>
                   </div>
                 </div>

@@ -13,16 +13,15 @@ import {
   Search,
   Filter
 } from 'lucide-react';
-import { contentApi } from '@/lib/api/contentApi';
 import useStore from '@/lib/store/useStore';
 import Image from 'next/image';
 
 interface ContentItem {
   id: string;
   title: string;
-  type: string;
-  author: string;
-  status: string;
+  type: 'STORY' | 'ARTICLE' | 'BOOK' | 'PODCAST';
+  author: { name: string };
+  status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
   publishedAt: string | null;
   createdAt: string;
   views: number;
@@ -42,19 +41,15 @@ export default function EditorContentPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!isAuthenticated || user?.role !== 'editor') {
-      router.push('/auth/login');
-      return;
-    }
-
     const loadContent = async () => {
       try {
-        const contentData = await contentApi.getAllContent({ 
-          includeUnpublished: true
-        });
-        
-        setContent(contentData.content);
-        setFilteredContent(contentData.content);
+        const res = await fetch('/api/v1/editor/content');
+        if (!res.ok) {
+          throw new Error('Failed to fetch content');
+        }
+        const contentData = await res.json();
+        setContent(contentData);
+        setFilteredContent(contentData);
       } catch (error) {
         console.error('Error loading content:', error);
       } finally {
@@ -63,7 +58,7 @@ export default function EditorContentPage() {
     };
 
     loadContent();
-  }, [isAuthenticated, user, router]);
+  }, []);
 
   useEffect(() => {
     let filtered = content;
@@ -75,7 +70,7 @@ export default function EditorContentPage() {
     if (searchTerm) {
       filtered = filtered.filter((item: ContentItem) => 
         item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.author.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.author.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.description.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
@@ -85,10 +80,16 @@ export default function EditorContentPage() {
 
   const handleStatusChange = async (contentId: string, newStatus: string) => {
     try {
-      await contentApi.updateContentStatus(contentId, newStatus);
-      setContent(prev => prev.map((item: ContentItem) => 
-        item.id === contentId ? { ...item, status: newStatus } : item
-      ));
+      const res = await fetch(`/api/v1/editor/content/${contentId}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      if (!res.ok) throw new Error('Failed to update status');
+
+      const updatedItem = await res.json();
+      setContent(prev => prev.map(item => (item.id === contentId ? { ...item, status: updatedItem.status } : item)));
     } catch (error) {
       console.error('Error updating content status:', error);
     }
@@ -96,13 +97,11 @@ export default function EditorContentPage() {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'published':
+      case 'PUBLISHED':
         return <CheckCircle size={16} className="text-green-500" />;
-      case 'draft':
+      case 'DRAFT':
         return <AlertCircle size={16} className="text-yellow-500" />;
-      case 'in-review':
-        return <Clock size={16} className="text-blue-500" />;
-      case 'rejected':
+      case 'ARCHIVED':
         return <XCircle size={16} className="text-red-500" />;
       default:
         return <AlertCircle size={16} className="text-gray-500" />;
@@ -111,13 +110,11 @@ export default function EditorContentPage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'published':
+      case 'PUBLISHED':
         return 'text-green-600 bg-green-100';
-      case 'draft':
+      case 'DRAFT':
         return 'text-yellow-600 bg-yellow-100';
-      case 'in-review':
-        return 'text-blue-600 bg-blue-100';
-      case 'rejected':
+      case 'ARCHIVED':
         return 'text-red-600 bg-red-100';
       default:
         return 'text-gray-600 bg-gray-100';
@@ -183,10 +180,9 @@ export default function EditorContentPage() {
             }}
           >
             <option value="all">All Status</option>
-            <option value="published">Published</option>
-            <option value="in-review">In Review</option>
-            <option value="draft">Draft</option>
-            <option value="rejected">Rejected</option>
+            <option value="PUBLISHED">Published</option>
+            <option value="DRAFT">Draft</option>
+            <option value="ARCHIVED">Archived</option>
           </select>
         </div>
       </div>
@@ -223,7 +219,7 @@ export default function EditorContentPage() {
                   <td className="px-6 py-4">
                     <div className="flex items-center space-x-3">
                       <Image 
-                        src={item.coverImage} 
+                        src={item.coverImage || '/images/placeholder.png'}
                         alt={item.title}
                         className="w-12 h-12 rounded-lg object-cover"
                         width={48}
@@ -241,7 +237,7 @@ export default function EditorContentPage() {
                   </td>
                   <td className="px-6 py-4">
                     <span className="text-sm" style={{ color: 'var(--color-textPrimary)' }}>
-                      {item.author}
+                      {item.author.name}
                     </span>
                   </td>
                   <td className="px-6 py-4">
@@ -252,10 +248,9 @@ export default function EditorContentPage() {
                         onChange={(e) => handleStatusChange(item.id, e.target.value)}
                         className={`text-xs font-medium px-2 py-1 rounded-full border-0 ${getStatusColor(item.status)}`}
                       >
-                        <option value="draft">Draft</option>
-                        <option value="in-review">In Review</option>
-                        <option value="published">Published</option>
-                        <option value="rejected">Rejected</option>
+                        <option value="DRAFT">Draft</option>
+                        <option value="PUBLISHED">Published</option>
+                        <option value="ARCHIVED">Archived</option>
                       </select>
                     </div>
                   </td>

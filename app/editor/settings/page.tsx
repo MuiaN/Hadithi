@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Settings, 
   Bell, 
@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 
 export default function EditorSettingsPage() {
-  const [settings, setSettings] = useState({
+  const [settings, setSettings] = useState<any>({
     notifications: {
       emailSubmissions: true,
       emailComments: false,
@@ -33,16 +33,53 @@ export default function EditorSettingsPage() {
 
   const [activeTab, setActiveTab] = useState('notifications');
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch('/api/v1/settings');
+        if (res.ok) {
+          const data = await res.json();
+          // Merge fetched settings with defaults to ensure all keys exist
+          setSettings((prev: any) => ({
+            notifications: { ...prev.notifications, ...data.notifications },
+            workflow: { ...prev.workflow, ...data.workflow },
+            preferences: { ...prev.preferences, ...data.preferences },
+          }));
+        }
+      } catch (error) {
+        console.error('Failed to fetch settings:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   const handleSave = async () => {
     setSaving(true);
-    // Simulate save operation
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setSaving(false);
+    try {
+      const res = await fetch('/api/v1/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings),
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to save settings. Please try again.');
+      }
+      // You can add a success toast notification here
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      // You can add an error toast notification here
+    } finally {
+      setSaving(false);
+    }
   };
 
   const updateSetting = (category: string, key: string, value: any) => {
-    setSettings(prev => ({
+    setSettings((prev: typeof settings) => ({
       ...prev,
       [category]: {
         ...prev[category as keyof typeof prev],
@@ -56,6 +93,14 @@ export default function EditorSettingsPage() {
     { id: 'workflow', label: 'Workflow', icon: Globe },
     { id: 'preferences', label: 'Preferences', icon: Settings }
   ];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--color-background)' }}>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderColor: 'var(--color-primary)' }}></div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8" style={{ backgroundColor: 'var(--color-background)' }}>
@@ -125,7 +170,7 @@ export default function EditorSettingsPage() {
                     </div>
                     <input
                       type="checkbox"
-                      checked={settings.notifications.emailSubmissions}
+                      checked={settings.notifications?.emailSubmissions || false}
                       onChange={(e) => updateSetting('notifications', 'emailSubmissions', e.target.checked)}
                       className="rounded"
                     />
@@ -138,7 +183,7 @@ export default function EditorSettingsPage() {
                     </div>
                     <input
                       type="checkbox"
-                      checked={settings.notifications.emailComments}
+                      checked={settings.notifications?.emailComments || false}
                       onChange={(e) => updateSetting('notifications', 'emailComments', e.target.checked)}
                       className="rounded"
                     />
@@ -151,7 +196,7 @@ export default function EditorSettingsPage() {
                     </div>
                     <input
                       type="checkbox"
-                      checked={settings.notifications.emailDeadlines}
+                      checked={settings.notifications?.emailDeadlines || false}
                       onChange={(e) => updateSetting('notifications', 'emailDeadlines', e.target.checked)}
                       className="rounded"
                     />
@@ -174,7 +219,7 @@ export default function EditorSettingsPage() {
                     </label>
                     <input
                       type="number"
-                      value={settings.workflow.reviewDeadline}
+                      value={settings.workflow?.reviewDeadline || 7}
                       onChange={(e) => updateSetting('workflow', 'reviewDeadline', parseInt(e.target.value))}
                       className="w-32 px-3 py-2 rounded-lg border"
                       style={{
@@ -193,7 +238,7 @@ export default function EditorSettingsPage() {
                       </div>
                       <input
                         type="checkbox"
-                        checked={settings.workflow.autoAssign}
+                        checked={settings.workflow?.autoAssign || false}
                         onChange={(e) => updateSetting('workflow', 'autoAssign', e.target.checked)}
                         className="rounded"
                       />
@@ -206,7 +251,7 @@ export default function EditorSettingsPage() {
                       </div>
                       <input
                         type="checkbox"
-                        checked={settings.workflow.requireSecondReview}
+                        checked={settings.workflow?.requireSecondReview || false}
                         onChange={(e) => updateSetting('workflow', 'requireSecondReview', e.target.checked)}
                         className="rounded"
                       />
@@ -219,7 +264,7 @@ export default function EditorSettingsPage() {
                       </div>
                       <input
                         type="checkbox"
-                        checked={settings.workflow.notifyAuthors}
+                        checked={settings.workflow?.notifyAuthors || false}
                         onChange={(e) => updateSetting('workflow', 'notifyAuthors', e.target.checked)}
                         className="rounded"
                       />
@@ -242,7 +287,7 @@ export default function EditorSettingsPage() {
                       Default View
                     </label>
                     <select
-                      value={settings.preferences.defaultView}
+                      value={settings.preferences?.defaultView || 'list'}
                       onChange={(e) => updateSetting('preferences', 'defaultView', e.target.value)}
                       className="w-full px-3 py-2 rounded-lg border"
                       style={{
@@ -262,7 +307,7 @@ export default function EditorSettingsPage() {
                       Items Per Page
                     </label>
                     <select
-                      value={settings.preferences.itemsPerPage}
+                      value={settings.preferences?.itemsPerPage || 20}
                       onChange={(e) => updateSetting('preferences', 'itemsPerPage', parseInt(e.target.value))}
                       className="w-full px-3 py-2 rounded-lg border"
                       style={{
@@ -287,7 +332,7 @@ export default function EditorSettingsPage() {
                     </div>
                     <input
                       type="checkbox"
-                      checked={settings.preferences.showPreview}
+                      checked={settings.preferences?.showPreview || false}
                       onChange={(e) => updateSetting('preferences', 'showPreview', e.target.checked)}
                       className="rounded"
                     />
@@ -300,7 +345,7 @@ export default function EditorSettingsPage() {
                     </div>
                     <input
                       type="checkbox"
-                      checked={settings.preferences.autoSave}
+                      checked={settings.preferences?.autoSave || false}
                       onChange={(e) => updateSetting('preferences', 'autoSave', e.target.checked)}
                       className="rounded"
                     />

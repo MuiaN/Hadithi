@@ -1,34 +1,56 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { useState, useEffect, useRef } from 'react';
+import { Button } from '@/components/ui/button'; // Assuming you have a Button component
+import { Card, CardContent } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Badge } from '@/components/ui/badge';
-import { Plus, Trash2, Eye, EyeOff, Edit, Calendar, Tag, User, ImageIcon } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { useGalleriesStore, GalleryImage, Gallery } from '@/lib/store/galleriesStore';
+import { Plus, Trash2, Eye, EyeOff, Edit, ImageIcon } from 'lucide-react';
+import { toast } from '@/components/ui/use-toast';
+import Link from 'next/link';
 import Image from 'next/image';
 
+export interface GalleryImage {
+  id: string;
+  url: string;
+  caption: string;
+  alt: string;
+  fileName?: string; // To store the original file name
+}
+
+export interface Gallery {
+  id: string;
+  title: string;
+  description: string;
+  images: GalleryImage[];
+  isPublished: boolean;
+  isFree: boolean;
+  authorId?: string;
+  createdAt: string;
+  updatedAt: string;
+  publishedAt: string | null;
+  tags: string[];
+  viewCount: number;
+  subscriptionTier: 'BRONZE' | 'SILVER' | 'GOLD' | null;
+}
+
 export default function CreatorGalleriesPage() {
-  const galleries = useGalleriesStore((state) => state.getUserGalleries());
-  const addGallery = useGalleriesStore((state) => state.addGallery);
-  const updateGallery = useGalleriesStore((state) => state.updateGallery);
-  const deleteGallery = useGalleriesStore((state) => state.deleteGallery);
+  const [galleries, setGalleries] = useState<Gallery[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingGallery, setEditingGallery] = useState<Gallery | null>(null);
-  const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     images: [] as GalleryImage[],
     tags: '',
-    is_published: false,
+    isPublished: false,
+    isFree: true,
+    subscriptionTier: null as 'BRONZE' | 'SILVER' | 'GOLD' | null,
   });
 
   const [newImage, setNewImage] = useState({
@@ -38,7 +60,21 @@ export default function CreatorGalleriesPage() {
   });
 
   useEffect(() => {
-    setLoading(false);
+    const fetchGalleries = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch('/api/v1/creator/galleries');
+        if (!res.ok) throw new Error('Failed to fetch galleries');
+        const data = await res.json();
+        setGalleries(data);
+      } catch (error) {
+        console.error(error);
+        toast({ title: 'Error', description: 'Could not load your galleries.', variant: 'destructive' });
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchGalleries();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -48,16 +84,35 @@ export default function CreatorGalleriesPage() {
       title: formData.title,
       description: formData.description,
       images: formData.images,
-      is_published: formData.is_published,
       tags: formData.tags.split(',').map(tag => tag.trim()).filter(Boolean),
-      published_at: formData.is_published ? new Date().toISOString() : null,
+      isFree: formData.isFree,
+      subscriptionTier: formData.isFree ? null : formData.subscriptionTier,
     };
 
     try {
+      let response;
       if (editingGallery) {
-        updateGallery(editingGallery.id, galleryData);
+        response = await fetch(`/api/v1/creator/galleries/${editingGallery.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(galleryData),
+        });
       } else {
-        addGallery(galleryData);
+        response = await fetch('/api/v1/creator/galleries', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(galleryData),
+        });
+      }
+
+      if (!response.ok) throw new Error(`Failed to ${editingGallery ? 'update' : 'create'} gallery`);
+
+      const savedGallery = await response.json();
+
+      if (editingGallery) {
+        setGalleries(galleries.map(g => g.id === savedGallery.id ? savedGallery : g));
+      } else {
+        setGalleries([savedGallery, ...galleries]);
       }
 
       toast({
@@ -79,7 +134,11 @@ export default function CreatorGalleriesPage() {
     if (!confirm('Are you sure you want to delete this gallery?')) return;
 
     try {
-      deleteGallery(id);
+      const response = await fetch(`/api/v1/creator/galleries/${id}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) throw new Error('Failed to delete gallery');
+      setGalleries(galleries.filter(g => g.id !== id));
       toast({
         title: 'Success',
         description: 'Gallery deleted successfully',
@@ -95,13 +154,20 @@ export default function CreatorGalleriesPage() {
 
   const togglePublish = async (gallery: Gallery) => {
     try {
-      updateGallery(gallery.id, { 
-        is_published: !gallery.is_published,
-        published_at: !gallery.is_published ? new Date().toISOString() : null
+      const response = await fetch(`/api/v1/creator/galleries/${gallery.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          isPublished: !gallery.isPublished, // Toggle the status
+          publishedAt: !gallery.isPublished ? new Date().toISOString() : null, // Set or clear publish date
+        }),
       });
+      if (!response.ok) throw new Error('Failed to update status');
+      const updated = await response.json();
+      setGalleries(galleries.map(g => g.id === updated.id ? updated : g));
       toast({
         title: 'Success',
-        description: `Gallery ${!gallery.is_published ? 'published' : 'unpublished'}`,
+        description: `Gallery ${updated.isPublished ? 'published' : 'unpublished'}`,
       });
     } catch (error) {
       toast({
@@ -119,27 +185,42 @@ export default function CreatorGalleriesPage() {
       description: gallery.description,
       images: gallery.images,
       tags: gallery.tags.join(', '),
-      is_published: gallery.is_published,
+      isPublished: gallery.isPublished,
+      isFree: gallery.isFree ?? true,
+      subscriptionTier: gallery.subscriptionTier,
     });
     setIsDialogOpen(true);
   };
 
   const addImageToGallery = () => {
-    if (!newImage.url) {
-      toast({
+    // This is a placeholder for actual file upload logic.
+    // In a real app, you would upload the file to a service (like S3, Cloudinary)
+    // and get a URL back. Here, we'll use a data URL for local preview.
+    const file = (fileInputRef.current?.files || [])[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const url = e.target?.result as string;
+        setFormData({
+          ...formData,
+          images: [
+            ...formData.images,
+            { ...newImage, url, id: crypto.randomUUID(), fileName: file.name }
+          ],
+        });
+        setNewImage({ url: '', caption: '', alt: '' });
+        if (fileInputRef.current) {
+          fileInputRef.current.value = ''; // Reset file input
+        }
+      };
+      reader.readAsDataURL(file);
+    } else {
+       toast({
         title: 'Error',
-        description: 'Image URL is required',
+        description: 'Please select an image file to upload.',
         variant: 'destructive',
       });
-      return;
     }
-
-    setFormData({
-      ...formData,
-      images: [...formData.images, { ...newImage }],
-    });
-
-    setNewImage({ url: '', caption: '', alt: '' });
   };
 
   const removeImage = (index: number) => {
@@ -155,7 +236,9 @@ export default function CreatorGalleriesPage() {
       description: '',
       images: [],
       tags: '',
-      is_published: false,
+      isPublished: false,
+      isFree: true,
+      subscriptionTier: null,
     });
     setNewImage({ url: '', caption: '', alt: '' });
     setEditingGallery(null);
@@ -167,7 +250,7 @@ export default function CreatorGalleriesPage() {
   };
 
   const formatDate = (dateString: string | null) => {
-    if (!dateString) return 'Not published';
+    if (!dateString) return '';
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
@@ -215,24 +298,18 @@ export default function CreatorGalleriesPage() {
               {galleries.length} {galleries.length === 1 ? 'gallery' : 'galleries'} created
             </p>
           </div>
-          <Dialog open={isDialogOpen} onOpenChange={handleDialogClose}>
-            <DialogTrigger asChild>
-              <Button 
-                onClick={() => setIsDialogOpen(true)}
-                style={{ backgroundColor: 'var(--color-primary)' }}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Create Gallery
-              </Button>
-            </DialogTrigger>
+          {/* This button was missing its trigger logic, moved inside the flex container */}
+          <Button onClick={() => setIsDialogOpen(true)} style={{ backgroundColor: 'var(--color-primary)' }}>
+            <Plus className="mr-2 h-4 w-4" />
+            Create Gallery
+          </Button>
+          <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) handleDialogClose(); else setIsDialogOpen(true); }}>
+            {/* This DialogTrigger is now handled by the onClick of the button below */}
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" style={{ backgroundColor: 'var(--color-card)' }}>
               <DialogHeader>
                 <DialogTitle style={{ color: 'var(--color-textPrimary)' }}>
                   {editingGallery ? 'Edit Gallery' : 'Create New Gallery'}
                 </DialogTitle>
-                <DialogDescription style={{ color: 'var(--color-textSecondary)' }}>
-                  {editingGallery ? 'Update your gallery information' : 'Add images and information to create a new gallery'}
-                </DialogDescription>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
@@ -277,27 +354,56 @@ export default function CreatorGalleriesPage() {
                     }}
                   />
                 </div>
-                <div className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    id="is_published"
-                    checked={formData.is_published}
-                    onChange={(e) => setFormData({ ...formData, is_published: e.target.checked })}
-                    className="rounded"
-                  />
-                  <Label htmlFor="is_published" style={{ color: 'var(--color-textPrimary)' }}>Publish gallery</Label>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t" style={{ borderColor: 'var(--color-border)' }}>
+                  <div>
+                    <Label className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        name="isFree"
+                        checked={formData.isFree}
+                        onChange={(e) => setFormData(prev => ({ ...prev, isFree: e.target.checked }))}
+                        className="rounded"
+                      />
+                      <span className="text-sm" style={{ color: 'var(--color-textPrimary)' }}>
+                        Free Gallery
+                      </span>
+                    </Label>
+                  </div>
+
+                  {!formData.isFree && (
+                    <div>
+                      <Label htmlFor="subscriptionTier" style={{ color: 'var(--color-textPrimary)' }}>Subscription Tier Required</Label>
+                      <select
+                        id="subscriptionTier"
+                        name="subscriptionTier"
+                        value={formData.subscriptionTier || ''}
+                        onChange={(e) => setFormData(prev => ({ ...prev, subscriptionTier: e.target.value as any }))}
+                        className="w-full mt-1 px-3 py-2 rounded-lg border"
+                        style={{ backgroundColor: 'var(--color-input)', borderColor: 'var(--color-inputBorder)', color: 'var(--color-textPrimary)' }}
+                      >
+                        <option value="">Select tier</option>
+                        <option value="BRONZE">Bronze</option>
+                        <option value="SILVER">Silver</option>
+                        <option value="GOLD">Gold</option>
+                      </select>
+                    </div>
+                  )}
                 </div>
 
                 <div className="border-t pt-4" style={{ borderColor: 'var(--color-border)' }}>
                   <h3 className="font-semibold mb-4" style={{ color: 'var(--color-textPrimary)' }}>Images</h3>
                   <div className="space-y-3 mb-4">
-                    <div>
-                      <Label htmlFor="image-url" style={{ color: 'var(--color-textPrimary)' }}>Image URL</Label>
+                    <div className="p-4 border-2 border-dashed rounded-lg text-center" style={{ borderColor: 'var(--color-border)' }}>
+                      <Label htmlFor="image-upload" className="cursor-pointer" style={{ color: 'var(--color-textPrimary)' }}>
+                        <ImageIcon className="mx-auto mb-2" size={24} />
+                        Click to upload an image
+                      </Label>
                       <Input
-                        id="image-url"
-                        value={newImage.url}
-                        onChange={(e) => setNewImage({ ...newImage, url: e.target.value })}
-                        placeholder="/images/your-image.jpg"
+                        id="image-upload"
+                        type="file"
+                        ref={fileInputRef}
+                        accept="image/*"
                         style={{
                           backgroundColor: 'var(--color-input)',
                           borderColor: 'var(--color-inputBorder)',
@@ -306,7 +412,7 @@ export default function CreatorGalleriesPage() {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="image-caption" style={{ color: 'var(--color-textPrimary)' }}>Caption</Label>
+                      <Label htmlFor="image-caption" style={{ color: 'var(--color-textPrimary)' }}>Caption (Optional)</Label>
                       <Input
                         id="image-caption"
                         value={newImage.caption}
@@ -320,7 +426,7 @@ export default function CreatorGalleriesPage() {
                       />
                     </div>
                     <div>
-                      <Label htmlFor="image-alt" style={{ color: 'var(--color-textPrimary)' }}>Alt Text</Label>
+                      <Label htmlFor="image-alt" style={{ color: 'var(--color-textPrimary)' }}>Alt Text (for accessibility)</Label>
                       <Input
                         id="image-alt"
                         value={newImage.alt}
@@ -333,18 +439,18 @@ export default function CreatorGalleriesPage() {
                         }}
                       />
                     </div>
-                    <Button type="button" onClick={addImageToGallery} variant="outline" size="sm">
-                      <Plus className="mr-2 h-4 w-4" />
+                    <Button type="button" onClick={addImageToGallery} variant="outline" size="sm" className="w-full justify-center">
+                      <ImageIcon className="mr-2 h-4 w-4" />
                       Add Image
                     </Button>
                   </div>
 
                   {formData.images.length > 0 && (
                     <div className="space-y-2">
-                      <h4 className="text-sm font-medium" style={{ color: 'var(--color-textPrimary)' }}>
+                      <h4 className="text-sm font-medium pt-4 border-t" style={{ color: 'var(--color-textPrimary)', borderColor: 'var(--color-border)' }}>
                         Added Images ({formData.images.length})
                       </h4>
-                      <div className="grid gap-2">
+                      <div className="grid gap-2 max-h-48 overflow-y-auto pr-2">
                         {formData.images.map((img, index) => (
                           <div 
                             key={index} 
@@ -363,7 +469,7 @@ export default function CreatorGalleriesPage() {
                                 {img.caption || 'No caption'}
                               </p>
                               <p className="text-xs truncate" style={{ color: 'var(--color-textSecondary)' }}>
-                                {img.url}
+                                {img.fileName || img.url.split('/').pop()}
                               </p>
                             </div>
                             <Button
@@ -412,122 +518,86 @@ export default function CreatorGalleriesPage() {
           </Card>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {galleries.map((gallery) => (
-              <Card
-                key={gallery.id}
-                className="overflow-hidden hover:shadow-xl transition-all duration-300"
-                style={{ backgroundColor: 'var(--color-card)' }}
-              >
-                <div className="aspect-video bg-gray-200 relative overflow-hidden">
-                  {gallery.images.length > 0 ? (
+            {galleries.map((gallery) => {
+              const statusText = gallery.isPublished ? 'Published' : 'Draft';
+              const statusColor = gallery.isPublished ? 'text-green-600 bg-green-100' : 'text-yellow-600 bg-yellow-100';
+
+              return (
+                <div key={gallery.id} className="card overflow-hidden" style={{ backgroundColor: 'var(--color-card)' }}>
+                  <div className="relative h-48 w-full">
                     <Image
-                      src={gallery.images[0].url}
-                      alt={gallery.images[0].alt}
+                      src={gallery.images.length > 0 ? gallery.images[0].url : '/images/placeholder.png'}
+                      alt={gallery.title}
                       className="w-full h-full object-cover"
-                      width={400}
-                      height={225}
+                      layout="fill"
                     />
-                  ) : (
-                    <div className="flex items-center justify-center h-full" style={{ color: 'var(--color-textSecondary)' }}>
-                      No images
+                    <div className="absolute top-4 left-4">
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${statusColor}`}>
+                        {statusText}
+                      </span>
                     </div>
-                  )}
-                  <div className="absolute top-3 right-3">
-                    <Badge 
-                      className="shadow-sm font-medium text-white"
-                      style={{ 
-                        background: gallery.is_published ? 'var(--gradient-primary)' : 'var(--color-secondary)'
-                      }}
-                    >
-                      {gallery.images.length} {gallery.images.length === 1 ? 'image' : 'images'}
-                    </Badge>
-                  </div>
-                  <div className="absolute top-3 left-3">
-                    <Badge 
-                      variant={gallery.is_published ? "default" : "secondary"}
-                      className="font-medium"
-                    >
-                      {gallery.is_published ? 'Published' : 'Draft'}
-                    </Badge>
-                  </div>
-                </div>
-                <CardHeader>
-                  <CardTitle className="line-clamp-2" style={{ color: 'var(--color-textPrimary)' }}>
-                    {gallery.title}
-                  </CardTitle>
-                  <CardDescription className="line-clamp-3" style={{ color: 'var(--color-textSecondary)' }}>
-                    {gallery.description || 'No description'}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between text-sm" style={{ color: 'var(--color-textSecondary)' }}>
-                      <div className="flex items-center gap-4">
-                        <div className="flex items-center gap-1">
-                          <Eye className="w-4 h-4" />
-                          <span>{formatNumber(gallery.view_count)}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Calendar className="w-4 h-4" />
-                          <span>{formatDate(gallery.published_at)}</span>
-                        </div>
-                      </div>
-                    </div>
-                    {gallery.tags.length > 0 && (
-                      <div className="flex flex-wrap gap-2">
-                        {gallery.tags.slice(0, 3).map((tag, index) => (
-                          <Badge key={index} variant="outline" className="text-xs">
-                            <Tag className="w-3 h-3 mr-1" />
-                            {tag}
-                          </Badge>
-                        ))}
-                        {gallery.tags.length > 3 && (
-                          <Badge variant="outline" className="text-xs">
-                            +{gallery.tags.length - 3} more
-                          </Badge>
-                        )}
-                      </div>
-                    )}
-                    <div className="flex gap-2 pt-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleEdit(gallery)}
-                        className="flex-1"
+                    <div className="absolute top-2 right-2">
+                      <button
+                        onClick={() => handleDelete(gallery.id)}
+                        className="p-2 rounded-full bg-white/20 text-white backdrop-blur-sm hover:bg-red-500/50 transition-colors"
+                        title="Delete"
                       >
-                        <Edit className="mr-2 h-4 w-4" />
-                        Edit
-                      </Button>
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="p-6">
+                    <h3 className="text-lg font-semibold mb-2 line-clamp-2" style={{ color: 'var(--color-textPrimary)' }}>
+                      {gallery.title}
+                    </h3>
+                    <p className="text-sm mb-4 line-clamp-3" style={{ color: 'var(--color-textSecondary)' }}>
+                      {gallery.description || 'No description provided.'}
+                    </p>
+
+                    <div className="flex items-center justify-between text-sm mb-4" style={{ color: 'var(--color-textSecondary)' }}>
+                      <span>Created {formatDate(gallery.createdAt)}</span>
+                      <div className="flex items-center space-x-4">
+                        <span className="flex items-center space-x-1">
+                          <Eye size={12} />
+                          <span>{formatNumber(gallery.viewCount)}</span>
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2">
+                      <Link
+                        href={`/creator/galleries/${gallery.id}`}
+                        className="col-span-1 flex items-center justify-center space-x-1 py-2 px-3 rounded-lg text-sm transition-colors"
+                        style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}
+                      >
+                        <Eye size={14} />
+                        <span>View</span>
+                      </Link>
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => togglePublish(gallery)}
-                        className="flex-1"
+                        className="col-span-1 flex items-center justify-center space-x-1 py-2 px-3 rounded-lg text-sm transition-colors"
+                        style={{ backgroundColor: 'var(--color-backgroundSecondary)', color: 'var(--color-textPrimary)' }}
                       >
-                        {gallery.is_published ? (
-                          <>
-                            <EyeOff className="mr-2 h-4 w-4" />
-                            Unpublish
-                          </>
-                        ) : (
-                          <>
-                            <Eye className="mr-2 h-4 w-4" />
-                            Publish
-                          </>
-                        )}
+                        {gallery.isPublished ? <EyeOff size={14} /> : <Eye size={14} />}
+                        <span className="hidden sm:inline">{gallery.isPublished ? 'Unpublish' : 'Publish'}</span>
                       </Button>
                       <Button
-                        variant="destructive"
+                        onClick={() => handleEdit(gallery)}
                         size="sm"
-                        onClick={() => handleDelete(gallery.id)}
+                        className="col-span-1 flex items-center justify-center space-x-1 py-2 px-3 rounded-lg text-sm transition-colors"
+                        style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Edit size={14} />
+                        <span className="hidden sm:inline">Edit</span>
                       </Button>
                     </div>
                   </div>
-                </CardContent>
-              </Card>
-            ))}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

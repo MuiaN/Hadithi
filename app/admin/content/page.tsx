@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { FileText, Eye, Edit, Trash2, Plus, Search, Filter } from 'lucide-react';
-import { content } from '@/lib/mockData/content';
+import { FileText, Eye, Edit, Trash2, Plus, Search, Filter, CheckCircle, AlertCircle, Clock, XCircle } from 'lucide-react';
 import useStore from '@/lib/store/useStore';
 
 interface ContentItem {
@@ -11,7 +10,7 @@ interface ContentItem {
   title: string;
   type: string;
   author: string;
-  status: string;
+  status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
   publishedAt: string | null;
   createdAt: string;
   views: number;
@@ -28,12 +27,14 @@ export default function AdminContentPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Simulate loading
-    setTimeout(() => {
-      setContentList(content);
-      setFilteredContent(content);
+    const fetchContent = async () => {
+      setLoading(true);
+      const res = await fetch('/api/v1/admin/content');
+      const data = await res.json();
+      setContentList(data.map((c: any) => ({ ...c, author: c.author.name })));
       setLoading(false);
-    }, 500);
+    };
+    fetchContent();
   }, []);
 
   useEffect(() => {
@@ -62,22 +63,20 @@ export default function AdminContentPage() {
 
   const handleStatusChange = (contentId: string, newStatus: string) => {
     setContentList(prev => prev.map(item =>
-      item.id === contentId ? { ...item, status: newStatus } : item
+      item.id === contentId ? { ...item, status: newStatus as 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' } : item
     ));
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'published':
+      case 'PUBLISHED':
         return 'text-green-600 bg-green-100';
-      case 'draft':
+      case 'DRAFT':
         return 'text-yellow-600 bg-yellow-100';
-      case 'in-review':
-        return 'text-blue-600 bg-blue-100';
-      case 'rejected':
+      case 'ARCHIVED':
         return 'text-red-600 bg-red-100';
       default:
-        return 'text-gray-600 bg-gray-100';
+        return 'text-blue-600 bg-blue-100';
     }
   };
 
@@ -144,7 +143,7 @@ export default function AdminContentPage() {
                 Published
               </p>
               <p className="text-2xl font-bold" style={{ color: 'var(--color-textPrimary)' }}>
-                {contentList.filter(c => c.status === 'published').length}
+                {contentList.filter(c => c.status === 'PUBLISHED').length}
               </p>
             </div>
             <Eye size={24} style={{ color: 'var(--color-success)' }} />
@@ -158,7 +157,7 @@ export default function AdminContentPage() {
                 In Review
               </p>
               <p className="text-2xl font-bold" style={{ color: 'var(--color-textPrimary)' }}>
-                {contentList.filter(c => c.status === 'in-review').length}
+                {contentList.filter(c => c.status === 'DRAFT').length}
               </p>
             </div>
             <Edit size={24} style={{ color: 'var(--color-info)' }} />
@@ -172,7 +171,7 @@ export default function AdminContentPage() {
                 Drafts
               </p>
               <p className="text-2xl font-bold" style={{ color: 'var(--color-textPrimary)' }}>
-                {contentList.filter(c => c.status === 'draft').length}
+                {contentList.filter(c => c.status === 'DRAFT').length}
               </p>
             </div>
             <FileText size={24} style={{ color: 'var(--color-warning)' }} />
@@ -211,10 +210,9 @@ export default function AdminContentPage() {
             }}
           >
             <option value="all">All Status</option>
-            <option value="published">Published</option>
-            <option value="in-review">In Review</option>
-            <option value="draft">Draft</option>
-            <option value="rejected">Rejected</option>
+            <option value="PUBLISHED">Published</option>
+            <option value="DRAFT">Draft</option>
+            <option value="ARCHIVED">Archived</option>
           </select>
 
           <select
@@ -295,10 +293,9 @@ export default function AdminContentPage() {
                       onChange={(e) => handleStatusChange(item.id, e.target.value)}
                       className={`text-xs font-medium px-2 py-1 rounded-full border-0 ${getStatusColor(item.status)}`}
                     >
-                      <option value="draft">Draft</option>
-                      <option value="in-review">In Review</option>
-                      <option value="published">Published</option>
-                      <option value="rejected">Rejected</option>
+                      <option value="DRAFT">Draft</option>
+                      <option value="PUBLISHED">Published</option>
+                      <option value="ARCHIVED">Archived</option>
                     </select>
                   </td>
                   <td className="px-6 py-4">

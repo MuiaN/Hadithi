@@ -11,18 +11,20 @@ import {
   Search,
   Filter
 } from 'lucide-react';
-import { contentApi } from '@/lib/api/contentApi';
 import useStore from '@/lib/store/useStore';
 import Image from 'next/image';
 
 interface ReadingHistoryItem {
   id: string;
-  title: string;
-  type: string;
-  author: string;
-  coverImage: string;
-  description: string;
-  readingTime: string;
+  content: {
+    id: string;
+    title: string;
+    type: string;
+    author: { name: string };
+    coverImage: string;
+    description: string;
+    readingTime: string;
+  };
   lastReadAt: string;
   progress: number;
   completed: boolean;
@@ -34,35 +36,15 @@ export default function ReadingHistoryPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState('all');
 
-  const { user, isAuthenticated, readingProgress } = useStore();
-  const router = useRouter();
+  const { isAuthenticated } = useStore();
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/auth/login');
-      return;
-    }
-
     const loadReadingHistory = async () => {
       try {
-        // Get all content and create mock reading history
-        const contentData = await contentApi.getAllContent();
-        
-        // Mock reading history based on some content
-        const mockHistory: ReadingHistoryItem[] = contentData.content.slice(0, 8).map((item: any, index: number) => ({
-          id: item.id,
-          title: item.title,
-          type: item.type,
-          author: item.author,
-          coverImage: item.coverImage,
-          description: item.description,
-          readingTime: item.readingTime,
-          lastReadAt: new Date(Date.now() - (index * 24 * 60 * 60 * 1000)).toISOString(),
-          progress: readingProgress[item.id] || Math.floor(Math.random() * 100),
-          completed: Math.random() > 0.5
-        }));
-        
-        setHistory(mockHistory);
+        const res = await fetch('/api/v1/user/reading-history');
+        if (!res.ok) throw new Error('Failed to fetch reading history');
+        const data = await res.json();
+        setHistory(data);
       } catch (error) {
         console.error('Error loading reading history:', error);
       } finally {
@@ -71,14 +53,14 @@ export default function ReadingHistoryPage() {
     };
 
     loadReadingHistory();
-  }, [isAuthenticated, readingProgress, router]);
+  }, []);
 
   const filteredHistory = history.filter((item: ReadingHistoryItem) => {
     const matchesSearch = searchTerm === '' || 
-      item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.author.toLowerCase().includes(searchTerm.toLowerCase());
+      item.content.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      item.content.author.name.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesType = filterType === 'all' || item.type === filterType;
+    const matchesType = filterType === 'all' || item.content.type.toLowerCase() === filterType;
     
     return matchesSearch && matchesType;
   });
@@ -178,15 +160,15 @@ export default function ReadingHistoryPage() {
         <div className="space-y-4">
           {filteredHistory.map((item) => (
             <Link
-              key={item.id}
-              href={`/content/${item.id}`}
+              key={item.content.id}
+              href={`/content/${item.content.id}`}
               className="card block p-6 transition-all duration-300 hover:shadow-lg"
               style={{ backgroundColor: 'var(--color-card)' }}
             >
               <div className="flex items-start space-x-6">
                 <Image
-                  src={item.coverImage}
-                  alt={item.title}
+                  src={item.content.coverImage || '/images/placeholder.png'}
+                  alt={item.content.title}
                   className="w-24 h-18 rounded-lg object-cover flex-shrink-0"
                   width={96}
                   height={72}
@@ -195,7 +177,7 @@ export default function ReadingHistoryPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center space-x-2 mb-2">
                     <span className="px-2 py-1 text-xs font-medium rounded capitalize" style={{ backgroundColor: 'var(--color-primary)20', color: 'var(--color-primary)' }}>
-                      {item.type}
+                      {item.content.type.toLowerCase()}
                     </span>
                     {item.completed && (
                       <span className="px-2 py-1 text-xs font-medium rounded text-green-600 bg-green-100">
@@ -205,19 +187,19 @@ export default function ReadingHistoryPage() {
                   </div>
 
                   <h3 className="text-lg font-semibold mb-2 line-clamp-2" style={{ color: 'var(--color-textPrimary)' }}>
-                    {item.title}
+                    {item.content.title}
                   </h3>
 
                   <p className="text-sm mb-3 line-clamp-2" style={{ color: 'var(--color-textSecondary)' }}>
-                    {item.description}
+                    {item.content.description}
                   </p>
 
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center space-x-4 text-sm" style={{ color: 'var(--color-textSecondary)' }}>
-                      <span>By {item.author}</span>
+                      <span>By {item.content.author.name}</span>
                       <span className="flex items-center space-x-1">
                         <Clock size={12} />
-                        <span>{item.readingTime}</span>
+                        <span>{item.content.readingTime}</span>
                       </span>
                     </div>
                     <span className="text-sm" style={{ color: 'var(--color-textSecondary)' }}>

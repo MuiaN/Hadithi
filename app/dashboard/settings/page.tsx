@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { 
   Settings, 
   User, 
@@ -53,34 +52,48 @@ export default function SettingsPage() {
     }
   });
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const { user, isAuthenticated, currentTheme, setTheme, currentTemplate, setTemplate } = useStore();
-  const router = useRouter();
+  const { user, currentTheme, setTheme, currentTemplate, setTemplate } = useStore();
 
   const themes = getAllThemes();
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/auth/login');
-      return;
-    }
-
-    // Initialize settings with current values
-    setSettings(prev => ({
-      ...prev,
-      preferences: {
-        ...prev.preferences,
-        theme: currentTheme,
-        template: currentTemplate
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch('/api/v1/settings');
+        if (res.ok) {
+          const data = await res.json();
+          setSettings(prev => ({
+            notifications: { ...prev.notifications, ...data.notifications },
+            privacy: { ...prev.privacy, ...data.privacy },
+            preferences: { ...prev.preferences, ...data.preferences, theme: currentTheme, template: currentTemplate },
+          }));
+        }
+      } catch (error) {
+        console.error('Failed to fetch settings:', error);
+      } finally {
+        setLoading(false);
       }
-    }));
-  }, [isAuthenticated, router, currentTheme, currentTemplate]);
+    };
+    fetchSettings();
+  }, [currentTheme, currentTemplate]);
 
   const handleSave = async () => {
     setSaving(true);
-    // Simulate save operation
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setSaving(false);
+    try {
+      await fetch('/api/v1/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings),
+      });
+      // Add success toast
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      // Add error toast
+    } finally {
+      setSaving(false);
+    }
   };
 
   const updateSetting = (category: string, key: string, value: any) => {
@@ -110,7 +123,7 @@ export default function SettingsPage() {
     { id: 'preferences', label: 'Preferences', icon: Settings }
   ];
 
-  if (!isAuthenticated || !user) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--color-background)' }}>
         <div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderColor: 'var(--color-primary)' }}></div>

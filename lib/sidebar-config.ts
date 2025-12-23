@@ -33,7 +33,7 @@ export const adminNavItems: NavItem[] = [
     title: 'Dashboard',
     href: '/admin',
     icon: LayoutDashboard,
-    roles: ['admin'],
+    roles: ['ADMIN'],
     prefetch: true,
     exact: true
   },
@@ -41,49 +41,49 @@ export const adminNavItems: NavItem[] = [
     title: 'Users',
     href: '/admin/users',
     icon: Users,
-    roles: ['admin'],
+    roles: ['ADMIN'],
     prefetch: true
   },
   {
     title: 'Content',
     href: '/admin/content',
     icon: FileText,
-    roles: ['admin'],
+    roles: ['ADMIN'],
     prefetch: true
   },
   {
     title: 'Analytics',
     href: '/admin/analytics',
     icon: BarChart3,
-    roles: ['admin'],
+    roles: ['ADMIN'],
     prefetch: true
   },
   {
     title: 'Comments',
     href: '/admin/comments',
     icon: MessageSquare,
-    roles: ['admin'],
+    roles: ['ADMIN'],
     prefetch: true
   },
   {
     title: 'Themes',
     href: '/admin/themes',
     icon: Palette,
-    roles: ['admin'],
+    roles: ['ADMIN'],
     prefetch: true
   },
   {
     title: 'Profile',
     href: '/admin/profile',
     icon: User,
-    roles: ['admin'],
+    roles: ['ADMIN'],
     prefetch: true
   },
   {
     title: 'Settings',
     href: '/admin/settings',
     icon: Settings,
-    roles: ['admin'],
+    roles: ['ADMIN'],
     prefetch: true
   }
 ];
@@ -93,7 +93,7 @@ export const editorNavItems: NavItem[] = [
     title: 'Dashboard',
     href: '/editor',
     icon: LayoutDashboard,
-    roles: ['editor'],
+    roles: ['EDITOR'],
     prefetch: true,
     exact: true
   },
@@ -101,56 +101,56 @@ export const editorNavItems: NavItem[] = [
     title: 'All Content',
     href: '/editor/content',
     icon: FileText,
-    roles: ['editor'],
+    roles: ['EDITOR'],
     prefetch: true
   },
   {
     title: 'Pending Review',
     href: '/editor/pending',
     icon: Clock,
-    roles: ['editor'],
+    roles: ['EDITOR'],
     prefetch: true
   },
   {
     title: 'Published',
     href: '/editor/published',
     icon: CheckCircle,
-    roles: ['editor'],
+    roles: ['EDITOR'],
     prefetch: true
   },
   {
     title: 'Rejected',
     href: '/editor/rejected',
     icon: XCircle,
-    roles: ['editor'],
+    roles: ['EDITOR'],
     prefetch: true
   },
   {
     title: 'Comments',
     href: '/editor/comments',
     icon: MessageSquare,
-    roles: ['editor'],
+    roles: ['EDITOR'],
     prefetch: true
   },
   {
     title: 'Analytics',
     href: '/editor/analytics',
     icon: BarChart3,
-    roles: ['editor'],
+    roles: ['EDITOR'],
     prefetch: true
   },
   {
     title: 'Profile',
     href: '/editor/profile',
     icon: User,
-    roles: ['editor'],
+    roles: ['EDITOR'],
     prefetch: true
   },
   {
     title: 'Settings',
     href: '/editor/settings',
     icon: Settings,
-    roles: ['editor'],
+    roles: ['EDITOR'],
     prefetch: true
   }
 ];
@@ -160,7 +160,7 @@ export const creatorNavItems: NavItem[] = [
     title: 'Dashboard',
     href: '/creator',
     icon: LayoutDashboard,
-    roles: ['creator'],
+    roles: ['CREATOR'],
     prefetch: true,
     exact: true
   },
@@ -168,56 +168,56 @@ export const creatorNavItems: NavItem[] = [
     title: 'Create Content',
     href: '/creator/new',
     icon: Plus,
-    roles: ['creator'],
+    roles: ['CREATOR'],
     prefetch: true
   },
   {
     title: 'My Content',
     href: '/creator/content',
     icon: FileText,
-    roles: ['creator'],
+    roles: ['CREATOR'],
     prefetch: true
   },
   {
     title: 'Drafts',
     href: '/creator/drafts',
     icon: Clock,
-    roles: ['creator'],
+    roles: ['CREATOR'],
     prefetch: true
   },
   {
     title: 'Published',
     href: '/creator/published',
     icon: CheckCircle,
-    roles: ['creator'],
+    roles: ['CREATOR'],
     prefetch: true
   },
   {
     title: 'Analytics',
     href: '/creator/analytics',
     icon: BarChart3,
-    roles: ['creator'],
+    roles: ['CREATOR'],
     prefetch: true
   },
   {
     title: 'Comments',
     href: '/creator/comments',
     icon: MessageSquare,
-    roles: ['creator'],
+    roles: ['CREATOR'],
     prefetch: true
   },
   {
     title: 'Profile',
     href: '/creator/profile',
     icon: User,
-    roles: ['creator'],
+    roles: ['CREATOR'],
     prefetch: true
   },
   {
     title: 'Settings',
     href: '/creator/settings',
     icon: Settings,
-    roles: ['creator'],
+    roles: ['CREATOR'],
     prefetch: true
   }
 ];
@@ -227,7 +227,7 @@ export const userNavItems: NavItem[] = [
     title: 'Dashboard',
     href: '/dashboard',
     icon: LayoutDashboard,
-    roles: ['user'],
+    roles: ['USER'],
     prefetch: true,
     exact: true
   },
@@ -235,35 +235,35 @@ export const userNavItems: NavItem[] = [
     title: 'Profile',
     href: '/dashboard/profile',
     icon: User,
-    roles: ['user'],
+    roles: ['USER'],
     prefetch: true
   },
   {
     title: 'Favorites',
     href: '/favorites',
     icon: Heart,
-    roles: ['user'],
+    roles: ['USER'],
     prefetch: true
   },
   {
     title: 'Reading History',
     href: '/reading-history',
     icon: BookOpen,
-    roles: ['user'],
+    roles: ['USER'],
     prefetch: true
   },
   {
     title: 'Subscription',
     href: '/subscription',
     icon: Crown,
-    roles: ['user'],
+    roles: ['USER'],
     prefetch: true
   },
   {
     title: 'Settings',
     href: '/settings',
     icon: Settings,
-    roles: ['user'],
+    roles: ['USER'],
     prefetch: true
   }
 ];
@@ -271,13 +271,13 @@ export const userNavItems: NavItem[] = [
 // Helper function to get navigation items by role
 export const getNavItemsByRole = (role: string): NavItem[] => {
   switch (role) {
-    case 'admin':
+    case 'ADMIN':
       return adminNavItems;
-    case 'editor':
+    case 'EDITOR':
       return editorNavItems;
-    case 'creator':
+    case 'CREATOR':
       return creatorNavItems;
-    case 'user':
+    case 'USER':
       return userNavItems;
     default:
       return userNavItems;

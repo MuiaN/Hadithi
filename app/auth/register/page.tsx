@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff, Mail, Lock, User, ArrowRight } from 'lucide-react';
-import { authApi } from '@/lib/api/authApi';
 import useStore from '@/lib/store/useStore';
 
 export default function RegisterPage() {
@@ -41,13 +40,20 @@ export default function RegisterPage() {
     }
 
     try {
-      const response = await authApi.register({
+      const res = await fetch('/api/v1/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
         name: formData.name,
         email: formData.email,
         password: formData.password,
         role: formData.role
+        }),
       });
       
+      const response = await res.json();
+      if (!res.ok) throw new Error(response.message || 'Registration failed');
+
       setUser(response.user);
       addNotification({
         type: 'success',

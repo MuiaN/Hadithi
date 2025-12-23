@@ -7,26 +7,24 @@ import {
   FileText, 
   Eye, 
   Edit, 
-  Trash2, 
+  Trash2,
   Search, 
   Filter,
   Plus
 } from 'lucide-react';
-import { contentApi } from '@/lib/api/contentApi';
 import useStore from '@/lib/store/useStore';
 import Image from 'next/image';
 
 interface ContentItem {
   id: string;
   title: string;
-  type: string;
-  author: string;
-  status: string;
+  type: 'STORY' | 'ARTICLE' | 'BOOK' | 'PODCAST';
+  status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' | 'PENDING_APPROVAL' | 'REJECTED';
   publishedAt: string | null;
   createdAt: string;
   views: number;
-  likes: number;
-  coverImage: string;
+  _count?: { likes: number };
+  coverImage: string | null;
   description: string;
 }
 
@@ -43,13 +41,11 @@ export default function CreatorContentPage() {
   useEffect(() => {
     const loadContent = async () => {
       try {
-        const contentData = await contentApi.getAllContent({
-          author: user?.id,
-          includeUnpublished: true
-        });
-        
-        setContent(contentData.content);
-        setFilteredContent(contentData.content);
+        const res = await fetch('/api/v1/creator/content');
+        if (!res.ok) throw new Error('Failed to fetch content');
+        const data = await res.json();
+        setContent(data);
+        setFilteredContent(data);
       } catch (error) {
         console.error('Error loading content:', error);
       } finally {
@@ -58,7 +54,30 @@ export default function CreatorContentPage() {
     };
 
     loadContent();
-  }, [user]);
+  }, []);
+
+  const handleDelete = async (contentId: string) => {
+    if (!confirm('Are you sure you want to archive this content?')) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/v1/creator/content/${contentId}`, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) {
+        throw new Error('Failed to archive content');
+      }
+
+      // Update the state to reflect the change
+      setContent(prevContent => prevContent.map(item => item.id === contentId ? { ...item, status: 'ARCHIVED' } : item));
+      alert('Content archived successfully.');
+    } catch (error) {
+      console.error('Error archiving content:', error);
+      alert('Failed to archive content.');
+    }
+  };
 
   useEffect(() => {
     let filtered = content;
@@ -77,23 +96,27 @@ export default function CreatorContentPage() {
     setFilteredContent(filtered);
   }, [content, searchTerm, statusFilter]);
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+  const formatDateTime = (dateString: string | null) => {
+    if (!dateString) return null;
+    return new Date(dateString).toLocaleString('en-US', {
       month: 'short',
       day: 'numeric',
-      year: 'numeric'
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
     });
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'published':
+      case 'PUBLISHED':
         return 'text-green-600 bg-green-100';
-      case 'draft':
+      case 'DRAFT':
         return 'text-yellow-600 bg-yellow-100';
-      case 'in-review':
+      case 'PENDING_APPROVAL':
         return 'text-blue-600 bg-blue-100';
-      case 'rejected':
+      case 'ARCHIVED':
         return 'text-red-600 bg-red-100';
       default:
         return 'text-gray-600 bg-gray-100';
@@ -163,10 +186,11 @@ export default function CreatorContentPage() {
             }}
           >
             <option value="all">All Status</option>
-            <option value="published">Published</option>
-            <option value="in-review">In Review</option>
-            <option value="draft">Draft</option>
-            <option value="rejected">Rejected</option>
+            <option value="PUBLISHED">Published</option>
+            <option value="DRAFT">Draft</option>
+            <option value="PENDING_APPROVAL">In Review</option>
+            <option value="REJECTED">Rejected</option>
+            <option value="ARCHIVED">Archived</option>
           </select>
         </div>
       </div>
@@ -201,17 +225,26 @@ export default function CreatorContentPage() {
               className="card overflow-hidden"
               style={{ backgroundColor: 'var(--color-card)' }}
             >
-              <div className="relative h-48">
+              <div className="relative h-48 w-full">
                 <Image
-                  src={item.coverImage}
+                  src={item.coverImage || '/images/placeholder.png'}
                   alt={item.title}
                   className="w-full h-full object-cover"
                   layout="fill"
                 />
                 <div className="absolute top-4 left-4">
                   <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(item.status)}`}>
-                    {item.status}
+                    {item.status.toLowerCase()}
                   </span>
+                </div>
+                <div className="absolute top-2 right-2">
+                  <button
+                    onClick={() => handleDelete(item.id)}
+                    className="p-2 rounded-full bg-white/20 text-white backdrop-blur-sm hover:bg-red-500/50 transition-colors"
+                    title="Archive"
+                  >
+                    <Trash2 size={16} />
+                  </button>
                 </div>
               </div>
 
@@ -224,7 +257,7 @@ export default function CreatorContentPage() {
                 </p>
 
                 <div className="flex items-center justify-between text-sm mb-4" style={{ color: 'var(--color-textSecondary)' }}>
-                  <span>Created {formatDate(item.createdAt)}</span>
+                  <span>Created {formatDateTime(item.createdAt)}</span>
                   <div className="flex items-center space-x-4">
                     <span className="flex items-center space-x-1">
                       <Eye size={12} />
@@ -235,7 +268,7 @@ export default function CreatorContentPage() {
 
                 <div className="flex items-center space-x-2">
                   <Link
-                    href={`/content/${item.id}`}
+                    href={item.type === 'PODCAST' ? `/creator/podcast/${item.id}` : `/creator/content/${item.id}`}
                     className="flex-1 flex items-center justify-center space-x-1 py-2 px-3 rounded-lg text-sm transition-colors"
                     style={{ backgroundColor: 'var(--color-backgroundSecondary)', color: 'var(--color-textPrimary)' }}
                   >

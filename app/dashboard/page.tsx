@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
   BookOpen, 
@@ -15,8 +14,6 @@ import {
   Calendar,
   MessageCircle
 } from 'lucide-react';
-import { contentApi } from '@/lib/api/contentApi';
-import { subscriptionApi } from '@/lib/api/subscriptionApi';
 import useStore from '@/lib/store/useStore';
 import Image from 'next/image';
 
@@ -24,7 +21,7 @@ interface ContentItem {
   id: string;
   title: string;
   type: string;
-  author: string;
+  author: { name: string };
   status: string;
   publishedAt: string | null;
   createdAt: string;
@@ -47,40 +44,39 @@ export default function UserDashboard() {
     articlesRead: 0,
     timeSpent: 0,
     favorites: 0,
-    comments: 0
+    comments: 0,
+    articlesReadThisMonth: 0
   });
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [loading, setLoading] = useState(true);
   
-  const { user, isAuthenticated, likedContent } = useStore();
-  const router = useRouter();
+  const { user, likedContent } = useStore();
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/auth/login');
-      return;
-    }
-
     const loadDashboardData = async () => {
       try {
-        const [recentData, userSub] = await Promise.all([
-          contentApi.getAllContent({ 
-            limit: 6,
-            userTier: user?.subscription || 'free'
-          }),
-          user ? subscriptionApi.getUserSubscription(user.id) : null
+        // Fetch recent content, user's subscription, and user stats
+        const [recentDataRes, userSubRes, userStatsRes] = await Promise.all([
+          fetch(`/api/v1/editor/content?limit=6`), // Using editor content as a placeholder for now
+          user ? fetch(`/api/v1/user/subscription`) : Promise.resolve(null),
+          user ? fetch(`/api/v1/user/stats`) : Promise.resolve(null)
         ]);
         
-        setRecentContent(recentData.content);
-        setSubscription(userSub);
+        const recentData = await recentDataRes.json();
+        setRecentContent(recentData);
         
-        // Mock user stats
-        setUserStats({
-          articlesRead: 24,
-          timeSpent: 180, // minutes
-          favorites: likedContent.length,
-          comments: 8
-        });
+        if (userSubRes && userSubRes.ok) {
+          const userSub = await userSubRes.json();
+          setSubscription(userSub);
+        }
+
+        if (userStatsRes && userStatsRes.ok) {
+          const statsData = await userStatsRes.json();
+          setUserStats(statsData);
+        } else {
+          // Fallback to likedContent length if stats API fails
+          setUserStats(prev => ({ ...prev, favorites: likedContent.length }));
+        }
       } catch (error) {
         console.error('Error loading dashboard data:', error);
       } finally {
@@ -89,7 +85,7 @@ export default function UserDashboard() {
     };
 
     loadDashboardData();
-  }, [isAuthenticated, user, router, likedContent]);
+  }, [user, likedContent]);
 
   const formatTime = (minutes: number) => {
     const hours = Math.floor(minutes / 60);
@@ -269,7 +265,7 @@ export default function UserDashboard() {
                 )}
                 
                 <Link
-                  href="/subscription"
+                  href="/dashboard/subscription"
                   className="inline-block px-4 py-2 rounded-lg text-sm font-medium transition-colors"
                   style={{ 
                     backgroundColor: 'var(--color-primary)', 
@@ -289,7 +285,7 @@ export default function UserDashboard() {
               
               <div className="space-y-3">
                 <Link
-                  href="/profile"
+                  href="/dashboard/profile"
                   className="flex items-center space-x-3 p-3 rounded-lg transition-colors hover:bg-opacity-50"
                   style={{ backgroundColor: 'var(--color-backgroundSecondary)' }}
                 >
@@ -298,7 +294,7 @@ export default function UserDashboard() {
                 </Link>
                 
                 <Link
-                  href="/stories?tags=favorites"
+                  href="/dashboard/favorites"
                   className="flex items-center space-x-3 p-3 rounded-lg transition-colors hover:bg-opacity-50"
                   style={{ backgroundColor: 'var(--color-backgroundSecondary)' }}
                 >
@@ -327,14 +323,14 @@ export default function UserDashboard() {
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm" style={{ color: 'var(--color-textSecondary)' }}>Reading Goal</span>
-                    <span className="text-sm font-medium" style={{ color: 'var(--color-textPrimary)' }}>24/30</span>
+                    <span className="text-sm font-medium" style={{ color: 'var(--color-textPrimary)' }}>{userStats.articlesReadThisMonth || 0}/30</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div 
                       className="h-2 rounded-full" 
                       style={{ 
                         backgroundColor: 'var(--color-primary)', 
-                        width: '80%' 
+                        width: `${((userStats.articlesReadThisMonth || 0) / 30) * 100}%`
                       }}
                     ></div>
                   </div>

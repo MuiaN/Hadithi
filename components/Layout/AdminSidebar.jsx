@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { 
   LayoutDashboard, 
   Users, 
@@ -17,12 +17,12 @@ import {
   LogOut
 } from 'lucide-react';
 import useStore from '@/lib/store/useStore';
-import { authApi } from '@/lib/api/authApi';
 import Image from 'next/image';
 
 export default function AdminSidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
   const { user, logout } = useStore();
 
   // Update CSS variable when collapsed state changes
@@ -32,8 +32,9 @@ export default function AdminSidebar() {
 
   const handleLogout = async () => {
     try {
-      await authApi.logout();
+      await fetch('/api/v1/auth/logout', { method: 'POST' });
       logout();
+      router.push('/');
     } catch (error) {
       console.error('Logout error:', error);
     }
@@ -83,10 +84,20 @@ export default function AdminSidebar() {
     }
   ];
 
-  const isActiveLink = (href, exact = false) => {
-    if (exact) {
-      return pathname === href;
+  const isActiveLink = (href, isExact = false) => {
+    if (isExact) {
+      // Remove trailing slashes for consistent comparison
+      const cleanPathname = pathname.replace(/\/$/, '');
+      const cleanHref = href.replace(/\/$/, '');
+      return cleanPathname === cleanHref;
     }
+    
+    // For dashboard specifically, also match when we're exactly on /admin
+    if (href === '/admin') {
+      return pathname === '/admin' || pathname.startsWith('/admin/');
+    }
+    
+    // For other nested routes
     return pathname.startsWith(href);
   };
 
@@ -122,7 +133,9 @@ export default function AdminSidebar() {
                 {user?.name}
               </p>
               <p className="text-xs truncate" style={{ color: 'var(--color-textSecondary)' }}>
-                {user?.role}
+                {user?.role
+                  ? user.role.charAt(0).toUpperCase() + user.role.slice(1).toLowerCase()
+                  : 'Admin'}
               </p>
             </div>
           </div>

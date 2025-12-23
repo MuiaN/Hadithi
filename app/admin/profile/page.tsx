@@ -15,7 +15,6 @@ import {
   X
 } from 'lucide-react';
 import useStore from '@/lib/store/useStore';
-import { authApi } from '@/lib/api/authApi';
 
 export default function AdminProfilePage() {
   const [editing, setEditing] = useState(false);
@@ -65,7 +64,14 @@ export default function AdminProfilePage() {
     
     setSaving(true);
     try {
-      const updatedUser = await authApi.updateProfile(user.id, profileData);
+      const res = await fetch(`/api/v1/admin/profile?userId=${user.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(profileData),
+      });
+      if (!res.ok) throw new Error('Failed to update profile');
+      const updatedUser = await res.json();
+
       setUser(updatedUser);
       setEditing(false);
     } catch (error) {
@@ -83,7 +89,14 @@ export default function AdminProfilePage() {
     
     setSaving(true);
     try {
-      const updatedUser = await authApi.updateProfile(user.id, { email: newEmail });
+      // Note: Email updates should have a verification flow in a real app.
+      const res = await fetch(`/api/v1/admin/profile?userId=${user.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: newEmail }),
+      });
+      if (!res.ok) throw new Error('Failed to update email');
+      const updatedUser = await res.json();
       setUser(updatedUser);
       setProfileData(prev => ({ ...prev, email: newEmail }));
       setEditingEmail(false);
@@ -122,7 +135,13 @@ export default function AdminProfilePage() {
         const updatedProfileData = { ...profileData, avatar: avatarUrl };
         setProfileData(updatedProfileData);
         
-        const updatedUser = await authApi.updateProfile(user.id, { avatar: avatarUrl });
+        const res = await fetch(`/api/v1/admin/profile?userId=${user.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ avatar: avatarUrl }),
+        });
+        if (!res.ok) throw new Error('Failed to upload avatar');
+        const updatedUser = await res.json();
         setUser(updatedUser);
       };
       reader.readAsDataURL(file);
@@ -141,7 +160,13 @@ export default function AdminProfilePage() {
       const updatedProfileData = { ...profileData, avatar: '' };
       setProfileData(updatedProfileData);
       
-      const updatedUser = await authApi.updateProfile(user.id, { avatar: '' });
+      const res = await fetch(`/api/v1/admin/profile?userId=${user.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ avatar: '' }),
+      });
+      if (!res.ok) throw new Error('Failed to remove avatar');
+      const updatedUser = await res.json();
       setUser(updatedUser);
     } catch (error) {
       console.error('Error removing avatar:', error);
@@ -214,6 +239,8 @@ export default function AdminProfilePage() {
                         src={profileData.avatar}
                         alt={profileData.name}
                         className="w-24 h-24 rounded-full object-cover"
+                        width={96}
+                        height={96}
                       />
                       {editing && (
                         <button

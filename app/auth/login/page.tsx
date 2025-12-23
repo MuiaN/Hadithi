@@ -4,7 +4,6 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff, Mail, Lock, ArrowRight } from 'lucide-react';
-import { authApi } from '@/lib/api/authApi';
 import useStore from '@/lib/store/useStore';
 
 export default function LoginPage() {
@@ -25,7 +24,17 @@ export default function LoginPage() {
     setError('');
 
     try {
-      const response = await authApi.login(formData.email, formData.password);
+      const res = await fetch('/api/v1/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+
+      const response = await res.json();
+      if (!res.ok) throw new Error(response.message || 'Login failed');
       
       setUser(response.user);
       addNotification({
@@ -33,16 +42,21 @@ export default function LoginPage() {
         message: `Welcome back, ${response.user.name}!`
       });
 
+      // A full page navigation is better here to ensure the new cookie is sent
+      // to the server and the middleware can process the session correctly.
+      let destination = '/dashboard';
       // Redirect based on user role
-      if (response.user.role === 'admin') {
-        router.push('/admin');
-      } else if (response.user.role === 'editor') {
-        router.push('/editor');
-      } else if (response.user.role === 'creator') {
-        router.push('/creator');
-      } else {
-        router.push('/dashboard');
+      if (response.user.role === 'ADMIN') {
+        destination = '/admin';
+      } else if (response.user.role === 'EDITOR') {
+        destination = '/editor';
+      } else if (response.user.role === 'CREATOR') {
+        destination = '/creator';
       }
+
+      // Use window.location.href for a full page reload to the destination
+      window.location.href = destination;
+
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Login failed. Please try again.');
     } finally {

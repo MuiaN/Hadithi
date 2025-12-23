@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { 
   LayoutDashboard, 
   FileText, 
@@ -18,12 +18,12 @@ import {
   LogOut
 } from 'lucide-react';
 import useStore from '@/lib/store/useStore';
-import { authApi } from '@/lib/api/authApi';
 import Image from 'next/image';
 
 export default function EditorSidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
   const { user, logout } = useStore();
 
   // Update CSS variable when collapsed state changes
@@ -33,8 +33,9 @@ export default function EditorSidebar() {
 
   const handleLogout = async () => {
     try {
-      await authApi.logout();
+      await fetch('/api/v1/auth/logout', { method: 'POST' });
       logout();
+      router.push('/');
     } catch (error) {
       console.error('Logout error:', error);
     }
@@ -89,11 +90,15 @@ export default function EditorSidebar() {
     }
   ];
 
-  const isActiveLink = (href: string, exact = false) => {
-    if (exact) {
-      return pathname === href;
+  const isActiveLink = (href: string, isExact = false) => {
+    if (isExact) {
+      // Remove trailing slashes for consistent comparison
+      const cleanPathname = pathname.replace(/\/$/, '');
+      const cleanHref = href.replace(/\/$/, '');
+      return cleanPathname === cleanHref;
     }
-    return pathname.startsWith(href);
+    // For other nested routes, we want to match if the path starts with the href, but not if it's the dashboard path itself.
+    return pathname.startsWith(href) && href !== '/editor';
   };
 
   return (

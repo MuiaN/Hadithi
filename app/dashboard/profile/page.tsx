@@ -14,7 +14,6 @@ import {
   X
 } from 'lucide-react';
 import useStore from '@/lib/store/useStore';
-import { authApi } from '@/lib/api/authApi';
 import Image from 'next/image';
 
 export default function UserProfilePage() {
@@ -37,11 +36,6 @@ export default function UserProfilePage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/auth/login');
-      return;
-    }
-
     if (user) {
       setProfileData({
         name: user.name || '',
@@ -53,14 +47,20 @@ export default function UserProfilePage() {
       });
       setNewEmail(user.email || '');
     }
-  }, [isAuthenticated, user, router]);
+  }, [user]);
 
   const handleSave = async () => {
     if (!user) return;
     
     setSaving(true);
     try {
-      const updatedUser = await authApi.updateProfile(user.id, profileData);
+      const res = await fetch('/api/v1/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(profileData),
+      });
+      if (!res.ok) throw new Error('Failed to update profile');
+      const updatedUser = await res.json();
       setUser(updatedUser);
       setEditing(false);
     } catch (error) {
@@ -78,7 +78,13 @@ export default function UserProfilePage() {
     
     setSaving(true);
     try {
-      const updatedUser = await authApi.updateProfile(user.id, { email: newEmail });
+      const res = await fetch('/api/v1/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: newEmail }),
+      });
+      if (!res.ok) throw new Error('Failed to update email');
+      const updatedUser = await res.json();
       setUser(updatedUser);
       setProfileData(prev => ({ ...prev, email: newEmail }));
       setEditingEmail(false);
@@ -117,7 +123,13 @@ export default function UserProfilePage() {
         const updatedProfileData = { ...profileData, avatar: avatarUrl };
         setProfileData(updatedProfileData);
         
-        const updatedUser = await authApi.updateProfile(user.id, { avatar: avatarUrl });
+        const res = await fetch('/api/v1/profile', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ avatar: avatarUrl }),
+        });
+        if (!res.ok) throw new Error('Failed to upload avatar');
+        const updatedUser = await res.json();
         setUser(updatedUser);
       };
       reader.readAsDataURL(file);
@@ -136,7 +148,13 @@ export default function UserProfilePage() {
       const updatedProfileData = { ...profileData, avatar: '' };
       setProfileData(updatedProfileData);
       
-      const updatedUser = await authApi.updateProfile(user.id, { avatar: '' });
+      const res = await fetch('/api/v1/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ avatar: '' }),
+      });
+      if (!res.ok) throw new Error('Failed to remove avatar');
+      const updatedUser = await res.json();
       setUser(updatedUser);
     } catch (error) {
       console.error('Error removing avatar:', error);

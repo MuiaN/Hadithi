@@ -8,20 +8,24 @@ import {
   Search,
   Filter
 } from 'lucide-react';
-import { contentApi } from '@/lib/api/contentApi';
 import useStore from '@/lib/store/useStore';
 import Image from 'next/image';
 
 interface Comment {
   id: string;
   contentId: string;
-  userId: string;
-  userName: string;
-  userAvatar: string;
   comment: string;
   createdAt: string;
-  likes: number;
-  contentTitle?: string;
+  author: {
+    name: string;
+    avatar: string | null;
+  };
+  content: { 
+    title: string;
+    series?: { id: string; title: string } | null;
+    rejectionReason?: string | null; // Added rejectionReason
+    chapterNumber?: number | null;
+  };
 }
 
 export default function CreatorCommentsPage() {
@@ -34,39 +38,10 @@ export default function CreatorCommentsPage() {
   useEffect(() => {
     const loadComments = async () => {
       try {
-        // Get user's content first
-        const contentData = await contentApi.getAllContent({
-          author: user?.id,
-          includeUnpublished: true
-        });
-
-        // Mock comments for user's content
-        const mockComments: Comment[] = [
-          {
-            id: '1',
-            contentId: '1',
-            userId: '4',
-            userName: 'Fatima Okafor',
-            userAvatar: 'https://images.pexels.com/photos/1181686/pexels-photo-1181686.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop',
-            comment: 'This is a beautiful retelling of the Golden Stool legend. I learned about this in school but this version captures the spiritual significance so well.',
-            createdAt: '2024-01-21T14:30:00.000Z',
-            likes: 12,
-            contentTitle: 'The Golden Stool of Ashanti'
-          },
-          {
-            id: '2',
-            contentId: '5',
-            userId: '4',
-            userName: 'Fatima Okafor',
-            userAvatar: 'https://images.pexels.com/photos/1181686/pexels-photo-1181686.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop',
-            comment: 'Anansi stories always teach such profound lessons. Thank you for sharing this complete version - I only knew fragments before.',
-            createdAt: '2024-02-09T11:45:00.000Z',
-            likes: 15,
-            contentTitle: 'Anansi the Spider: Wisdom Keeper'
-          }
-        ];
-
-        setComments(mockComments);
+        const res = await fetch('/api/v1/creator/comments');
+        if (!res.ok) throw new Error('Failed to fetch comments');
+        const data = await res.json();
+        setComments(data);
       } catch (error) {
         console.error('Error loading comments:', error);
       } finally {
@@ -75,12 +50,12 @@ export default function CreatorCommentsPage() {
     };
 
     loadComments();
-  }, [user]);
+  }, []);
 
   const filteredComments = comments.filter((comment: Comment) =>
     comment.comment.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    comment.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    comment.contentTitle?.toLowerCase().includes(searchTerm.toLowerCase())
+    comment.author.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    comment.content.title?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const formatDate = (dateString: string) => {
@@ -152,10 +127,10 @@ export default function CreatorCommentsPage() {
               style={{ backgroundColor: 'var(--color-card)', border: '1px solid var(--color-border)' }}
             >
               <div className="flex items-start space-x-4">
-                {comment.userAvatar ? (
+                {comment.author.avatar ? (
                   <Image
-                    src={comment.userAvatar}
-                    alt={comment.userName}
+                    src={comment.author.avatar}
+                    alt={comment.author.name}
                     className="w-12 h-12 rounded-full object-cover"
                     width={48}
                     height={48}
@@ -163,7 +138,7 @@ export default function CreatorCommentsPage() {
                 ) : (
                   <div className="w-12 h-12 bg-gradient-to-br from-amber-500 to-orange-600 rounded-full flex items-center justify-center">
                     <span className="text-white font-medium">
-                      {comment.userName.charAt(0).toUpperCase()}
+                      {comment.author.name.charAt(0).toUpperCase()}
                     </span>
                   </div>
                 )}
@@ -171,13 +146,19 @@ export default function CreatorCommentsPage() {
                 <div className="flex-1">
                   <div className="flex items-center space-x-2 mb-2">
                     <h3 className="font-medium" style={{ color: 'var(--color-textPrimary)' }}>
-                      {comment.userName}
+                      {comment.author.name}
                     </h3>
                     <span className="text-sm" style={{ color: 'var(--color-textSecondary)' }}>
                       commented on
                     </span>
+                    {comment.content.series && (
+                      <span className="text-sm font-medium" style={{ color: 'var(--color-textSecondary)' }}>
+                        {comment.content.series.title}
+                        {comment.content.chapterNumber && ` - Chapter ${comment.content.chapterNumber}`}
+                      </span>
+                    )}
                     <span className="text-sm font-medium" style={{ color: 'var(--color-primary)' }}>
-                      {comment.contentTitle}
+                      {comment.content.title}
                     </span>
                   </div>
 
@@ -188,10 +169,6 @@ export default function CreatorCommentsPage() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4 text-sm" style={{ color: 'var(--color-textSecondary)' }}>
                       <span>{formatDate(comment.createdAt)}</span>
-                      <span className="flex items-center space-x-1">
-                        <Heart size={12} />
-                        <span>{comment.likes} likes</span>
-                      </span>
                     </div>
 
                     <button

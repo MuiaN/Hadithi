@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Menu, X, User, LogOut, Settings, LayoutDashboard } from 'lucide-react';
 import useStore from '@/lib/store/useStore';
-import { authApi } from '@/lib/api/authApi';
 import Image from 'next/image';
 
 export default function Navbar() {
@@ -18,7 +17,7 @@ export default function Navbar() {
 
   const handleLogout = async () => {
     try {
-      await authApi.logout();
+      await fetch('/api/v1/auth/logout', { method: 'POST' });
       logout();
       setIsUserMenuOpen(false);
       router.push('/');
@@ -31,11 +30,11 @@ export default function Navbar() {
     if (!user) return null;
     
     switch (user.role) {
-      case 'admin':
+      case 'ADMIN':
         return { href: '/admin', label: 'Admin Dashboard' };
-      case 'editor':
+      case 'EDITOR':
         return { href: '/editor', label: 'Editor Dashboard' };
-      case 'creator':
+      case 'CREATOR':
         return { href: '/creator', label: 'Creator Dashboard' };
       default:
         return { href: '/dashboard', label: 'Dashboard' };

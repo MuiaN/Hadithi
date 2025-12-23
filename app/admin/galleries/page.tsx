@@ -9,26 +9,37 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2, Eye, EyeOff, Edit, Calendar, Tag, ImageIcon } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
-import { useGalleriesStore, GalleryImage, Gallery } from '@/lib/store/galleriesStore';
 import Image from 'next/image';
 
+interface GalleryImage {
+  id: string;
+  url: string;
+  caption: string;
+  alt: string;
+}
+
+interface Gallery {
+  id: string;
+  title: string;
+  description: string;
+  images: GalleryImage[];
+  isPublished: boolean;
+  tags: string[];
+  publishedAt: string | null;
+  viewCount: number;
+}
+
 export default function AdminGalleriesPage() {
-  const galleries = useGalleriesStore((state) => state.getUserGalleries());
-  const addGallery = useGalleriesStore((state) => state.addGallery);
-  const updateGallery = useGalleriesStore((state) => state.updateGallery);
-  const deleteGallery = useGalleriesStore((state) => state.deleteGallery);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingGallery, setEditingGallery] = useState<Gallery | null>(null);
-  const { toast } = useToast();
 
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     images: [] as GalleryImage[],
     tags: '',
-    is_published: false,
+    isPublished: false,
   });
 
   const [newImage, setNewImage] = useState({
@@ -37,8 +48,17 @@ export default function AdminGalleriesPage() {
     alt: '',
   });
 
+  const [galleries, setGalleries] = useState<Gallery[]>([]);
+
   useEffect(() => {
-    setLoading(false);
+    const fetchGalleries = async () => {
+      setLoading(true);
+      const res = await fetch('/api/v1/admin/galleries');
+      const data = await res.json();
+      setGalleries(data);
+      setLoading(false);
+    };
+    fetchGalleries();
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -48,30 +68,30 @@ export default function AdminGalleriesPage() {
       title: formData.title,
       description: formData.description,
       images: formData.images,
-      is_published: formData.is_published,
+      isPublished: formData.isPublished,
       tags: formData.tags.split(',').map(tag => tag.trim()).filter(Boolean),
-      published_at: formData.is_published ? new Date().toISOString() : null,
+      publishedAt: formData.isPublished ? new Date().toISOString() : null,
     };
 
     try {
-      if (editingGallery) {
-        updateGallery(editingGallery.id, galleryData);
-      } else {
-        addGallery(galleryData);
-      }
+      // if (editingGallery) {
+      //   updateGallery(editingGallery.id, galleryData);
+      // } else {
+      //   addGallery(galleryData);
+      // }
 
-      toast({
-        title: 'Success',
-        description: `Gallery ${editingGallery ? 'updated' : 'created'} successfully`,
-      });
+      // toast({
+      //   title: 'Success',
+      //   description: `Gallery ${editingGallery ? 'updated' : 'created'} successfully`,
+      // });
       setIsDialogOpen(false);
       resetForm();
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: `Failed to ${editingGallery ? 'update' : 'create'} gallery`,
-        variant: 'destructive',
-      });
+      // toast({
+      //   title: 'Error',
+      //   description: `Failed to ${editingGallery ? 'update' : 'create'} gallery`,
+      //   variant: 'destructive',
+      // });
     }
   };
 
@@ -79,36 +99,36 @@ export default function AdminGalleriesPage() {
     if (!confirm('Are you sure you want to delete this gallery?')) return;
 
     try {
-      deleteGallery(id);
-      toast({
-        title: 'Success',
-        description: 'Gallery deleted successfully',
-      });
+      // deleteGallery(id);
+      // toast({
+      //   title: 'Success',
+      //   description: 'Gallery deleted successfully',
+      // });
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to delete gallery',
-        variant: 'destructive',
-      });
+      // toast({
+      //   title: 'Error',
+      //   description: 'Failed to delete gallery',
+      //   variant: 'destructive',
+      // });
     }
   };
 
   const togglePublish = async (gallery: Gallery) => {
     try {
-      updateGallery(gallery.id, { 
-        is_published: !gallery.is_published,
-        published_at: !gallery.is_published ? new Date().toISOString() : null
-      });
-      toast({
-        title: 'Success',
-        description: `Gallery ${!gallery.is_published ? 'published' : 'unpublished'}`,
-      });
+      // updateGallery(gallery.id, {
+      //   isPublished: !gallery.isPublished,
+      //   publishedAt: !gallery.isPublished ? new Date().toISOString() : null
+      // });
+      // toast({
+      //   title: 'Success',
+      //   description: `Gallery ${!gallery.is_published ? 'published' : 'unpublished'}`,
+      // });
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to update gallery status',
-        variant: 'destructive',
-      });
+      // toast({
+      //   title: 'Error',
+      //   description: 'Failed to update gallery status',
+      //   variant: 'destructive',
+      // });
     }
   };
 
@@ -119,24 +139,24 @@ export default function AdminGalleriesPage() {
       description: gallery.description,
       images: gallery.images,
       tags: gallery.tags.join(', '),
-      is_published: gallery.is_published,
+      isPublished: gallery.isPublished,
     });
     setIsDialogOpen(true);
   };
 
   const addImageToGallery = () => {
     if (!newImage.url) {
-      toast({
-        title: 'Error',
-        description: 'Image URL is required',
-        variant: 'destructive',
-      });
+      // toast({
+      //   title: 'Error',
+      //   description: 'Image URL is required',
+      //   variant: 'destructive',
+      // });
       return;
     }
 
     setFormData({
       ...formData,
-      images: [...formData.images, { ...newImage }],
+      images: [...formData.images, { id: crypto.randomUUID(), ...newImage }],
     });
 
     setNewImage({ url: '', caption: '', alt: '' });
@@ -155,7 +175,7 @@ export default function AdminGalleriesPage() {
       description: '',
       images: [],
       tags: '',
-      is_published: false,
+      isPublished: false,
     });
     setNewImage({ url: '', caption: '', alt: '' });
     setEditingGallery(null);
@@ -281,8 +301,8 @@ export default function AdminGalleriesPage() {
                   <input
                     type="checkbox"
                     id="is_published"
-                    checked={formData.is_published}
-                    onChange={(e) => setFormData({ ...formData, is_published: e.target.checked })}
+                    checked={formData.isPublished}
+                    onChange={(e) => setFormData({ ...formData, isPublished: e.target.checked })}
                     className="rounded"
                   />
                   <Label htmlFor="is_published" style={{ color: 'var(--color-textPrimary)' }}>Publish gallery</Label>
@@ -436,7 +456,7 @@ export default function AdminGalleriesPage() {
                     <Badge 
                       className="shadow-sm font-medium text-white"
                       style={{ 
-                        background: gallery.is_published ? 'var(--gradient-primary)' : 'var(--color-secondary)'
+                        background: gallery.isPublished ? 'var(--gradient-primary)' : 'var(--color-secondary)'
                       }}
                     >
                       {gallery.images.length} {gallery.images.length === 1 ? 'image' : 'images'}
@@ -444,10 +464,10 @@ export default function AdminGalleriesPage() {
                   </div>
                   <div className="absolute top-3 left-3">
                     <Badge 
-                      variant={gallery.is_published ? "default" : "secondary"}
+                      variant={gallery.isPublished ? "default" : "secondary"}
                       className="font-medium"
                     >
-                      {gallery.is_published ? 'Published' : 'Draft'}
+                      {gallery.isPublished ? 'Published' : 'Draft'}
                     </Badge>
                   </div>
                 </div>
@@ -465,11 +485,11 @@ export default function AdminGalleriesPage() {
                       <div className="flex items-center gap-4">
                         <div className="flex items-center gap-1">
                           <Eye className="w-4 h-4" />
-                          <span>{formatNumber(gallery.view_count)}</span>
+                          <span>{formatNumber(gallery.viewCount)}</span>
                         </div>
                         <div className="flex items-center gap-1">
                           <Calendar className="w-4 h-4" />
-                          <span>{formatDate(gallery.published_at)}</span>
+                          <span>{formatDate(gallery.publishedAt)}</span>
                         </div>
                       </div>
                     </div>
@@ -504,7 +524,7 @@ export default function AdminGalleriesPage() {
                         onClick={() => togglePublish(gallery)}
                         className="flex-1"
                       >
-                        {gallery.is_published ? (
+                        {gallery.isPublished ? (
                           <>
                             <EyeOff className="mr-2 h-4 w-4" />
                             Unpublish

@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { Users, UserPlus, Shield, Crown, Search, Filter, MoreHorizontal } from 'lucide-react';
-import { users } from '@/lib/mockData/users';
 import useStore from '@/lib/store/useStore';
 import Image from 'next/image';
 
@@ -11,7 +10,7 @@ interface User {
   email: string;
   name: string;
   role: string;
-  subscription: string | null;
+  subscription: { tier: string } | null;
   avatar: string | null;
   bio: string | null;
   createdAt: string | null;
@@ -27,12 +26,14 @@ export default function UsersPage() {
   const { user: currentUser } = useStore();
 
   useEffect(() => {
-    // Simulate loading
-    setTimeout(() => {
-      setUserList(users);
-      setFilteredUsers(users);
+    const fetchUsers = async () => {
+      setLoading(true);
+      const res = await fetch('/api/v1/admin/users');
+      const data = await res.json();
+      setUserList(data);
       setLoading(false);
-    }, 500);
+    };
+    fetchUsers();
   }, []);
 
   useEffect(() => {
@@ -62,26 +63,26 @@ export default function UsersPage() {
 
   const getRoleColor = (role: string) => {
     switch (role) {
-      case 'admin':
+      case 'ADMIN':
         return 'text-red-600 bg-red-100';
-      case 'editor':
+      case 'EDITOR':
         return 'text-blue-600 bg-blue-100';
-      case 'creator':
+      case 'CREATOR':
         return 'text-green-600 bg-green-100';
-      case 'user':
+      case 'USER':
         return 'text-gray-600 bg-gray-100';
       default:
         return 'text-gray-600 bg-gray-100';
     }
   };
 
-  const getSubscriptionColor = (subscription: string | null) => {
+  const getSubscriptionColor = (subscription: string | undefined) => {
     switch (subscription) {
-      case 'gold':
+      case 'GOLD':
         return 'text-yellow-600 bg-yellow-100';
-      case 'silver':
+      case 'SILVER':
         return 'text-gray-600 bg-gray-100';
-      case 'bronze':
+      case 'BRONZE':
         return 'text-orange-600 bg-orange-100';
       default:
         return 'text-gray-500 bg-gray-50';
@@ -151,7 +152,7 @@ export default function UsersPage() {
                 Admins
               </p>
               <p className="text-2xl font-bold" style={{ color: 'var(--color-textPrimary)' }}>
-                {userList.filter(u => u.role === 'admin').length}
+                {userList.filter(u => u.role === 'ADMIN').length}
               </p>
             </div>
             <Shield size={24} style={{ color: 'var(--color-error)' }} />
@@ -165,7 +166,7 @@ export default function UsersPage() {
                 Creators
               </p>
               <p className="text-2xl font-bold" style={{ color: 'var(--color-textPrimary)' }}>
-                {userList.filter(u => u.role === 'creator').length}
+                {userList.filter(u => u.role === 'CREATOR').length}
               </p>
             </div>
             <UserPlus size={24} style={{ color: 'var(--color-success)' }} />
@@ -218,10 +219,10 @@ export default function UsersPage() {
             }}
           >
             <option value="all">All Roles</option>
-            <option value="admin">Admin</option>
-            <option value="editor">Editor</option>
-            <option value="creator">Creator</option>
-            <option value="user">User</option>
+            <option value="ADMIN">Admin</option>
+            <option value="EDITOR">Editor</option>
+            <option value="CREATOR">Creator</option>
+            <option value="USER">User</option>
           </select>
         </div>
       </div>
@@ -289,15 +290,15 @@ export default function UsersPage() {
                       disabled={user.id === currentUser?.id}
                       className={`text-xs font-medium px-2 py-1 rounded-full border-0 ${getRoleColor(user.role)}`}
                     >
-                      <option value="user">User</option>
-                      <option value="creator">Creator</option>
-                      <option value="editor">Editor</option>
-                      <option value="admin">Admin</option>
+                      <option value="USER">User</option>
+                      <option value="CREATOR">Creator</option>
+                      <option value="EDITOR">Editor</option>
+                      <option value="ADMIN">Admin</option>
                     </select>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`text-xs font-medium px-2 py-1 rounded-full ${getSubscriptionColor(user.subscription)}`}>
-                      {user.subscription ? user.subscription.charAt(0).toUpperCase() + user.subscription.slice(1) : 'Free'}
+                    <span className={`text-xs font-medium px-2 py-1 rounded-full ${getSubscriptionColor(user.subscription?.tier)}`}>
+                      {user.subscription ? user.subscription.tier.charAt(0).toUpperCase() + user.subscription.tier.slice(1).toLowerCase() : 'Free'}
                     </span>
                   </td>
                   <td className="px-6 py-4">

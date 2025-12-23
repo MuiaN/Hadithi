@@ -13,22 +13,26 @@ import {
   Plus,
   TrendingUp
 } from 'lucide-react';
-import { contentApi } from '@/lib/api/contentApi';
 import useStore from '@/lib/store/useStore';
 import Image from 'next/image';
 
 interface ContentItem {
   id: string;
   title: string;
-  type: string;
-  author: string;
-  status: string;
+  type: 'STORY' | 'ARTICLE' | 'BOOK' | 'PODCAST';
+  status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
   publishedAt: string | null;
   createdAt: string;
   views: number;
-  likes: number;
-  coverImage: string;
+  _count?: { likes: number };
+  coverImage: string | null;
   description: string;
+  rejectionReason: string | null; // Added rejectionReason
+  series?: {
+    id: string;
+    title: string;
+  } | null;
+  chapterNumber?: number;
 }
 
 export default function PublishedPage() {
@@ -42,13 +46,10 @@ export default function PublishedPage() {
   useEffect(() => {
     const loadPublished = async () => {
       try {
-        const contentData = await contentApi.getAllContent({
-          author: user?.id,
-          includeUnpublished: true
-        });
-        
-        const publishedContent = contentData.content.filter((c: ContentItem) => c.status === 'published');
-        setPublished(publishedContent);
+        const res = await fetch('/api/v1/creator/content?status=PUBLISHED');
+        if (!res.ok) throw new Error('Failed to fetch published content');
+        const data = await res.json();
+        setPublished(data);
       } catch (error) {
         console.error('Error loading published content:', error);
       } finally {
@@ -57,7 +58,7 @@ export default function PublishedPage() {
     };
 
     loadPublished();
-  }, [user]);
+  }, []);
 
   const filteredPublished = published.filter((item: ContentItem) =>
     item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -163,7 +164,7 @@ export default function PublishedPage() {
             >
               <div className="flex items-start space-x-6">
                 <Image
-                  src={item.coverImage}
+                  src={item.coverImage || '/images/placeholder.png'}
                   alt={item.title}
                   className="w-32 h-24 rounded-lg object-cover flex-shrink-0"
                   width={128}
@@ -172,12 +173,18 @@ export default function PublishedPage() {
 
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center space-x-2 mb-2">
+                    {item.series && (
+                      <span className="px-2 py-1 text-xs rounded-full capitalize" style={{ backgroundColor: 'var(--color-backgroundSecondary)', color: 'var(--color-textPrimary)' }}>
+                        {item.series.title}
+                        {item.chapterNumber && ` - Chapter ${item.chapterNumber}`}
+                      </span>
+                    )}
                     <CheckCircle size={16} className="text-green-500" />
                     <span className="text-xs font-medium px-2 py-1 rounded-full text-green-600 bg-green-100">
                       Published
                     </span>
                     <span className="px-2 py-1 text-xs rounded-full capitalize" style={{ backgroundColor: 'var(--color-primary)20', color: 'var(--color-primary)' }}>
-                      {item.type}
+                      {item.type.toLowerCase()}
                     </span>
                   </div>
 
@@ -204,7 +211,7 @@ export default function PublishedPage() {
                       </span>
                       <span className="flex items-center space-x-1">
                         <Heart size={14} />
-                        <span>{formatNumber(item.likes)}</span>
+                        <span>{formatNumber(item._count?.likes || 0)}</span>
                       </span>
                       <span className="flex items-center space-x-1">
                         <MessageCircle size={14} />

@@ -1,12 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: 'export',
   reactStrictMode: false,
   trailingSlash: true,
   eslint: {
     ignoreDuringBuilds: true,
   },
   images: { unoptimized: true },
+
+  transpilePackages: ['jose'],
+
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {
@@ -16,21 +18,19 @@ const nextConfig = {
         tls: false,
       };
     }
-    
-    config.optimization = {
-      ...config.optimization,
-      splitChunks: {
-        chunks: 'all',
-        cacheGroups: {
-          vendor: {
-            test: /[\\/]node_modules[\\/]/,
-            name: 'vendors',
-            chunks: 'all',
-          },
-        },
+
+    // Ensure proper module resolution
+    config.resolve = {
+      ...config.resolve,
+      extensionAlias: {
+        '.js': ['.js', '.ts', '.tsx'],
       },
     };
-    
+
+    config.optimization = {
+      ...config.optimization,
+    };
+
     return config;
   },
 };

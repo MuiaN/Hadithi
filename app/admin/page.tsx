@@ -3,24 +3,22 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { 
-  Users, 
-  FileText, 
-  DollarSign, 
-  TrendingUp, 
-  Eye, 
-  Heart, 
-  Clock, 
-  Activity, 
-  Shield, 
+import {
+  Users,
+  FileText,
+  DollarSign,
+  TrendingUp,
+  Eye,
+  Heart,
+  Clock,
+  Activity,
+  Shield,
   AlertTriangle,
   Settings,
   MessageCircle,
   Calendar,
   Palette
 } from 'lucide-react';
-import { contentApi } from '@/lib/api/contentApi';
-import { subscriptionApi } from '@/lib/api/subscriptionApi';
 import useStore from '@/lib/store/useStore';
 import { getAllThemes, getTheme } from '@/lib/themes';
 
@@ -34,60 +32,27 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [recentContent, setRecentContent] = useState<any[]>([]);
   const [recentUsers, setRecentUsers] = useState<any[]>([]);
-  const [recentActivity, setRecentActivity] = useState<any[]>([]);  
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
 
   const { user, currentTheme, setTheme } = useStore();
   const themes = getAllThemes();
 
   useEffect(() => {
     const loadDashboardData = async () => {
+      setLoading(true);
       try {
-        const [contentData, subscriptionStats] = await Promise.all([
-          contentApi.getAllContent({ includeUnpublished: true }),
-          subscriptionApi.getSubscriptionStats()
-        ]);
-        
-        // Calculate content stats
-        const publishedContent = contentData.content.filter((c: any) => c.status === 'published');
-        const draftContent = contentData.content.filter((c: any) => c.status === 'draft');
-        
-        // Calculate engagement stats
-        const totalViews = contentData.content.reduce((sum: number, c: any) => sum + c.views, 0);
-        const totalLikes = contentData.content.reduce((sum: number, c: any) => sum + c.likes, 0);
+        const res = await fetch('/api/v1/admin/stats');
+        const data = await res.json();
 
         setStats({
-          users: { 
-            total: 150, // Mock data
-            new: 23 
-          },
-          content: { 
-            total: contentData.content.length,
-            published: publishedContent.length,
-            draft: draftContent.length
-          },
-          subscriptions: { 
-            total: subscriptionStats.activeSubscribers,
-            revenue: subscriptionStats.revenue.monthly
-          },
-          engagement: { 
-            views: totalViews,
-            likes: totalLikes,
-            comments: 45 // Mock data
-          }
+          users: data.users || { total: 0, new: 0 },
+          content: data.content || { total: 0, published: 0, draft: 0 },
+          subscriptions: data.subscriptions || { total: 0, revenue: 0 },
+          engagement: data.engagement || { views: 0, likes: 0, comments: 0 },
         });
 
-        // Get recent content
-        const recent = contentData.content
-          .sort((a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-          .slice(0, 5);
-        setRecentContent(recent);
-
-        // Mock recent users
-        setRecentUsers([
-          { id: '1', name: 'Amara Kone', email: 'amara@example.com', joinedAt: '2024-02-15T10:00:00.000Z' },
-          { id: '2', name: 'Kwame Asante', email: 'kwame@example.com', joinedAt: '2024-02-14T15:30:00.000Z' },
-          { id: '3', name: 'Fatima Okafor', email: 'fatima@example.com', joinedAt: '2024-02-13T09:15:00.000Z' }
-        ]);
+        setRecentContent(data.recentContent || []);
+        setRecentUsers(data.recentUsers || []);
 
         // Mock recent activity
         setRecentActivity([
@@ -95,7 +60,7 @@ export default function AdminDashboard() {
           { id: '2', type: 'content_published', description: 'Article published: "Modern African Literature"', timestamp: '2024-02-15T13:15:00.000Z' },
           { id: '3', type: 'subscription_upgraded', description: 'User upgraded to Gold tier', timestamp: '2024-02-15T12:45:00.000Z' },
           { id: '4', type: 'content_flagged', description: 'Content flagged for review', timestamp: '2024-02-15T11:20:00.000Z' }
-        ]);        
+        ]);
 
       } catch (error) {
         console.error('Error loading dashboard data:', error);
@@ -171,10 +136,10 @@ export default function AdminDashboard() {
           </div>
           <div className="flex items-center space-x-2 text-sm" style={{ color: 'var(--color-textSecondary)' }}>
             <Calendar size={16} />
-            <span>{new Date().toLocaleDateString('en-US', { 
-              weekday: 'long', 
-              month: 'long', 
-              day: 'numeric' 
+            <span>{new Date().toLocaleDateString('en-US', {
+              weekday: 'long',
+              month: 'long',
+              day: 'numeric'
             })}</span>
           </div>
         </div>
@@ -291,7 +256,7 @@ export default function AdminDashboard() {
                     {item.title}
                   </h3>
                   <p className="text-sm" style={{ color: 'var(--color-textSecondary)' }}>
-                    By {item.author} • {formatDate(item.createdAt)}
+                    By {item.author.name} • {formatDate(item.createdAt)}
                   </p>
                   <div className="flex items-center space-x-4 mt-2 text-xs" style={{ color: 'var(--color-textTertiary)' }}>
                     <span className="flex items-center space-x-1">
@@ -302,11 +267,10 @@ export default function AdminDashboard() {
                       <Heart size={12} />
                       <span>{formatNumber(item.likes)}</span>
                     </span>
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      item.status === 'published' 
-                        ? 'bg-green-100 text-green-800' 
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${item.status === 'published'
+                        ? 'bg-green-100 text-green-800'
                         : 'bg-yellow-100 text-yellow-800'
-                    }`}>
+                      }`}>
                       {item.status}
                     </span>
                   </div>
@@ -370,7 +334,7 @@ export default function AdminDashboard() {
                     {user.email}
                   </p>
                   <p className="text-xs" style={{ color: 'var(--color-textTertiary)' }}>
-                    Joined {formatDate(user.joinedAt)}
+                    Joined {formatDate(user.createdAt)}
                   </p>
                 </div>
               </div>
@@ -388,15 +352,14 @@ export default function AdminDashboard() {
                 Platform Theme
               </h3>
             </div>
-            
+
             <div className="space-y-3">
               {themes.map((theme) => (
                 <button
                   key={theme.name}
                   onClick={() => handleThemeChange(theme.name)}
-                  className={`w-full flex items-center justify-between p-3 rounded-lg border transition-colors ${
-                    currentTheme === theme.name ? 'shadow-md' : ''
-                  }`}
+                  className={`w-full flex items-center justify-between p-3 rounded-lg border transition-colors ${currentTheme === theme.name ? 'shadow-md' : ''
+                    }`}
                   style={{
                     backgroundColor: currentTheme === theme.name ? 'var(--color-primary)10' : 'var(--color-backgroundSecondary)',
                     borderColor: currentTheme === theme.name ? 'var(--color-primary)' : 'var(--color-border)'
@@ -404,15 +367,15 @@ export default function AdminDashboard() {
                 >
                   <div className="flex items-center space-x-3">
                     <div className="flex space-x-1">
-                      <div 
+                      <div
                         className="w-3 h-3 rounded-full"
                         style={{ backgroundColor: theme.colors.primary }}
                       ></div>
-                      <div 
+                      <div
                         className="w-3 h-3 rounded-full"
                         style={{ backgroundColor: theme.colors.secondary }}
                       ></div>
-                      <div 
+                      <div
                         className="w-3 h-3 rounded-full"
                         style={{ backgroundColor: theme.colors.success }}
                       ></div>
@@ -429,7 +392,7 @@ export default function AdminDashboard() {
                 </button>
               ))}
             </div>
-            
+
             <div className="mt-4 p-3 rounded-lg" style={{ backgroundColor: 'var(--color-backgroundTertiary)' }}>
               <p className="text-xs" style={{ color: 'var(--color-textSecondary)' }}>
                 Theme changes apply instantly across the entire platform. To add new themes, create a file in <code>lib/themes/</code> and import it in the index.

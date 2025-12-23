@@ -10,20 +10,19 @@ import {
   Calendar,
   TrendingUp
 } from 'lucide-react';
-import { contentApi } from '@/lib/api/contentApi';
 import useStore from '@/lib/store/useStore';
 import Image from 'next/image';
 
 interface ContentItem {
   id: string;
   title: string;
-  type: string;
-  author: string;
-  status: string;
+  type: 'STORY' | 'ARTICLE' | 'BOOK' | 'PODCAST';
+  author: { name: string };
+  status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
   publishedAt: string | null;
   createdAt: string;
   views: number;
-  likes: number;
+  _count: { likes: number };
   coverImage: string;
   description: string;
 }
@@ -37,18 +36,11 @@ export default function EditorPublishedPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!isAuthenticated || user?.role !== 'editor') {
-      router.push('/auth/login');
-      return;
-    }
-
     const loadPublished = async () => {
       try {
-        const contentData = await contentApi.getAllContent({ 
-          includeUnpublished: true
-        });
-        
-        const publishedContent = contentData.content.filter((c: ContentItem) => c.status === 'published');
+        const res = await fetch('/api/v1/editor/content?status=PUBLISHED');
+        if (!res.ok) throw new Error('Failed to fetch published content');
+        const publishedContent = await res.json();
         setPublished(publishedContent);
       } catch (error) {
         console.error('Error loading published content:', error);
@@ -58,11 +50,11 @@ export default function EditorPublishedPage() {
     };
 
     loadPublished();
-  }, [isAuthenticated, user, router]);
+  }, []);
 
   const filteredPublished = published.filter((item: ContentItem) =>
     item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.author.toLowerCase().includes(searchTerm.toLowerCase())
+    item.author.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const formatDate = (dateString: string | null) => {
@@ -170,7 +162,7 @@ export default function EditorPublishedPage() {
                       Published
                     </span>
                     <span className="px-2 py-1 text-xs rounded-full capitalize" style={{ backgroundColor: 'var(--color-primary)20', color: 'var(--color-primary)' }}>
-                      {item.type}
+                      {item.type.toLowerCase()}
                     </span>
                   </div>
 
@@ -184,7 +176,7 @@ export default function EditorPublishedPage() {
 
                   <div className="flex items-center justify-between">
                     <div className="flex items-center space-x-4 text-sm" style={{ color: 'var(--color-textSecondary)' }}>
-                      <span>By {item.author}</span>
+                      <span>By {item.author.name}</span>
                       <span className="flex items-center space-x-1">
                         <Calendar size={12} />
                         <span>Published {formatDate(item.publishedAt)}</span>
@@ -198,7 +190,7 @@ export default function EditorPublishedPage() {
                       </span>
                       <span className="flex items-center space-x-1">
                         <TrendingUp size={14} />
-                        <span>{formatNumber(item.likes)}</span>
+                        <span>{formatNumber(item._count.likes)}</span>
                       </span>
                     </div>
                   </div>

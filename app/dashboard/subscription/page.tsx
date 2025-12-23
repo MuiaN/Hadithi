@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { 
   Crown, 
   Check, 
@@ -11,7 +12,6 @@ import {
   Calendar,
   ArrowRight
 } from 'lucide-react';
-import { subscriptionApi } from '@/lib/api/subscriptionApi';
 import useStore from '@/lib/store/useStore';
 
 export default function SubscriptionPage() {
@@ -19,19 +19,26 @@ export default function SubscriptionPage() {
   const [currentSubscription, setCurrentSubscription] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [upgrading, setUpgrading] = useState<string | null>(null);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [selectedTier, setSelectedTier] = useState<string | null>(null);
 
   const { user, isAuthenticated, setUser } = useStore();
 
   useEffect(() => {
     const loadSubscriptionData = async () => {
       try {
-        const [tiersData, userSub] = await Promise.all([
-          subscriptionApi.getSubscriptionTiers(),
-          user ? subscriptionApi.getUserSubscription(user.id) : null
+        const [tiersRes, userSubRes] = await Promise.all([
+          fetch('/api/v1/subscriptions/tiers'),
+          user ? fetch(`/api/v1/user/subscription`) : null // This API needs to be created
         ]);
 
+        const tiersData = await tiersRes.json();
         setTiers(tiersData);
-        setCurrentSubscription(userSub);
+
+        if (userSubRes && userSubRes.ok) {
+          const userSub = await userSubRes.json();
+          setCurrentSubscription(userSub);
+        }
       } catch (error) {
         console.error('Error loading subscription data:', error);
       } finally {
@@ -47,10 +54,13 @@ export default function SubscriptionPage() {
 
     setUpgrading(tierName);
     try {
-      // Simulate payment process
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      const updatedSubscription = await subscriptionApi.updateSubscription(user.id, tierName);
+      const res = await fetch('/api/v1/user/subscription', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tierName }),
+      });
+      if (!res.ok) throw new Error('Upgrade failed');
+      const updatedSubscription = await res.json();
       setCurrentSubscription(updatedSubscription);
       
       // Update user in store
@@ -60,6 +70,16 @@ export default function SubscriptionPage() {
     } finally {
       setUpgrading(null);
     }
+  };
+
+  const handleInitiateUpgrade = (tierName: string) => {
+    setSelectedTier(tierName);
+    setIsPaymentDialogOpen(true);
+  };
+
+  const handlePayment = () => {
+    setIsPaymentDialogOpen(false);
+    if (selectedTier) handleUpgrade(selectedTier);
   };
 
   const getTierIcon = (tierName: string) => {
@@ -208,7 +228,7 @@ export default function SubscriptionPage() {
                     </button>
                   ) : (
                     <button
-                      onClick={() => handleUpgrade(tierName)}
+                      onClick={() => handleInitiateUpgrade(tierName)}
                       disabled={upgrading === tierName}
                       className={`w-full py-3 px-4 rounded-lg font-medium text-sm transition-colors disabled:opacity-50 ${
                         tierName === 'free' 
@@ -255,6 +275,41 @@ export default function SubscriptionPage() {
             </div>
           ))}
         </div>
+
+        {/* Payment Simulation Dialog */}
+        <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+          <DialogContent style={{ backgroundColor: 'var(--color-card)' }}>
+            <DialogHeader>
+              <DialogTitle style={{ color: 'var(--color-textPrimary)' }}>
+                Complete Your Payment
+              </DialogTitle>
+              <DialogDescription style={{ color: 'var(--color-textSecondary)' }}>
+                Choose your preferred payment method to upgrade your plan.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-6 space-y-4">
+              <button
+                onClick={handlePayment}
+                className="w-full flex items-center justify-center space-x-2 py-3 px-4 rounded-lg font-medium text-sm transition-colors"
+                style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}
+              >
+                <CreditCard size={16} />
+                <span>Pay with Card (Simulated)</span>
+              </button>
+              <button
+                onClick={handlePayment}
+                className="w-full flex items-center justify-center space-x-2 py-3 px-4 rounded-lg font-medium text-sm transition-colors"
+                style={{ 
+                  backgroundColor: 'var(--color-success)', 
+                  color: 'white'
+                }}
+              >
+                <Zap size={16} />
+                <span>Pay with M-Pesa (Simulated)</span>
+              </button>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* FAQ Section */}
         <div className="mt-16">

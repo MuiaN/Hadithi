@@ -12,8 +12,6 @@ import {
   Download,
   Filter
 } from 'lucide-react';
-import { contentApi } from '@/lib/api/contentApi';
-import { subscriptionApi } from '@/lib/api/subscriptionApi';
 import Image from 'next/image';
 
 // Define TypeScript interfaces for our data structures
@@ -21,7 +19,7 @@ interface OverviewStats {
   totalViews: number;
   totalUsers: number;
   totalContent: number;
-  engagement: number;
+  engagementRate: number;
 }
 
 interface ContentPerformanceItem {
@@ -69,7 +67,7 @@ export default function AnalyticsPage() {
       totalViews: 0,
       totalUsers: 0,
       totalContent: 0,
-      engagement: 0
+      engagementRate: 0
     },
     contentPerformance: [],
     userGrowth: [],
@@ -83,65 +81,28 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     const loadAnalytics = async () => {
+      setLoading(true);
       try {
-        const [contentData, subscriptionStats] = await Promise.all([
-          contentApi.getAllContent({ includeUnpublished: true }),
-          subscriptionApi.getSubscriptionStats()
-        ]);
+        // Fetch overview stats from the new endpoint
+        const overviewRes = await fetch('/api/v1/admin/analytics');
+        const overviewData: OverviewStats = await overviewRes.json();
 
-        // Calculate analytics with proper typing
-        const totalViews = contentData.content.reduce((sum: number, c: any) => sum + (c.views || 0), 0);
-        const totalLikes = contentData.content.reduce((sum: number, c: any) => sum + (c.likes || 0), 0);
-        
+        // TODO: Fetch these from dedicated backend endpoints as well
         // Mock user growth data
         const userGrowthData: UserGrowthData[] = [
           { month: 'Jan', users: 120 },
           { month: 'Feb', users: 150 },
           { month: 'Mar', users: 180 },
           { month: 'Apr', users: 220 },
-          { month: 'May', users: 280 },
-          { month: 'Jun', users: 350 }
+          { month: 'May', users: overviewData.totalUsers - 70 },
+          { month: 'Jun', users: overviewData.totalUsers }
         ];
-
-        // Transform content data to match ContentPerformanceItem interface
-        const contentPerformance: ContentPerformanceItem[] = contentData.content
-          .map((item: any) => ({
-            id: item.id,
-            title: item.title,
-            type: item.type,
-            coverImage: item.coverImage,
-            views: item.views || 0,
-            likes: item.likes || 0,
-            status: item.status,
-            author: item.author,
-            authorId: item.authorId,
-            description: item.description,
-            publishedAt: item.publishedAt,
-            createdAt: item.createdAt,
-            tags: item.tags,
-            isFree: item.isFree,
-            subscriptionTier: item.subscriptionTier
-          }))
-          .sort((a: ContentPerformanceItem, b: ContentPerformanceItem) => (b.views || 0) - (a.views || 0))
-          .slice(0, 10);
-
-        // Transform subscription stats to match SubscriptionStats interface
-        const formattedSubscriptionStats: SubscriptionStats = {
-          total: subscriptionStats.activeSubscribers || 0,
-          byTier: {
-            bronze: subscriptionStats.byTier?.bronze || 0,
-            silver: subscriptionStats.byTier?.silver || 0,
-            gold: subscriptionStats.byTier?.gold || 0
-          }
-        };
+        // Mock other data for now
+        const contentPerformance: ContentPerformanceItem[] = [];
+        const formattedSubscriptionStats: SubscriptionStats = { total: 0, byTier: { bronze: 0, silver: 0, gold: 0 }};
 
         setAnalytics({
-          overview: {
-            totalViews,
-            totalUsers: 350,
-            totalContent: contentData.content.length,
-            engagement: totalViews > 0 ? Math.round((totalLikes / totalViews) * 100) : 0
-          },
+          overview: overviewData,
           contentPerformance,
           userGrowth: userGrowthData,
           subscriptionStats: formattedSubscriptionStats
@@ -277,7 +238,7 @@ export default function AnalyticsPage() {
                 Engagement Rate
               </p>
               <p className="text-2xl font-bold" style={{ color: 'var(--color-textPrimary)' }}>
-                {analytics.overview.engagement}%
+                {analytics.overview.engagementRate}%
               </p>
               <p className="text-sm" style={{ color: 'var(--color-success)' }}>
                 +2% from last month

@@ -11,22 +11,26 @@ import {
   Plus,
   Clock
 } from 'lucide-react';
-import { contentApi } from '@/lib/api/contentApi';
 import useStore from '@/lib/store/useStore';
 import Image from 'next/image';
 
 interface ContentItem {
   id: string;
   title: string;
-  type: string;
-  author: string;
-  status: string;
+  type: 'STORY' | 'ARTICLE' | 'BOOK' | 'PODCAST';
+  status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' | 'REJECTED';
   publishedAt: string | null;
   createdAt: string;
   views: number;
-  likes: number;
-  coverImage: string;
+  _count?: { likes: number };
+  coverImage: string | null;
   description: string;
+  rejectionReason: string | null; // Added rejectionReason
+  series?: {
+    id: string;
+    title: string;
+  } | null;
+  chapterNumber?: number;
 }
 
 export default function DraftsPage() {
@@ -40,13 +44,10 @@ export default function DraftsPage() {
   useEffect(() => {
     const loadDrafts = async () => {
       try {
-        const contentData = await contentApi.getAllContent({
-          author: user?.id,
-          includeUnpublished: true
-        });
-        
-        const draftContent = contentData.content.filter((c: ContentItem) => c.status === 'draft');
-        setDrafts(draftContent);
+        const res = await fetch('/api/v1/creator/content?status=DRAFT&status=REJECTED'); // Fetch DRAFT and REJECTED
+        if (!res.ok) throw new Error('Failed to fetch drafts');
+        const data = await res.json();
+        setDrafts(data);
       } catch (error) {
         console.error('Error loading drafts:', error);
       } finally {
@@ -55,7 +56,7 @@ export default function DraftsPage() {
     };
 
     loadDrafts();
-  }, [user]);
+  }, []);
 
   const filteredDrafts = drafts.filter((item: ContentItem) =>
     item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -153,7 +154,7 @@ export default function DraftsPage() {
             >
               <div className="relative h-48">
                 <Image
-                  src={item.coverImage}
+                  src={item.coverImage || '/images/placeholder.png'}
                   alt={item.title}
                   className="w-full h-full object-cover"
                   width={400}
@@ -169,14 +170,25 @@ export default function DraftsPage() {
               <div className="p-6">
                 <h3 className="text-lg font-semibold mb-2 line-clamp-2" style={{ color: 'var(--color-textPrimary)' }}>
                   {item.title}
+                    {item.series && (
+                      <span className="ml-2 text-sm font-medium text-gray-500">
+                        ({item.series.title}
+                        {item.chapterNumber && ` - Chapter ${item.chapterNumber}`})
+                      </span>
+                    )}
                 </h3>
                 <p className="text-sm mb-4 line-clamp-3" style={{ color: 'var(--color-textSecondary)' }}>
                   {item.description}
-                </p>
+                  </p>
+                  {item.status === 'REJECTED' && item.rejectionReason && (
+                    <p className="text-sm text-red-500 mt-2">
+                      Reason for rejection: {item.rejectionReason}
+                    </p>
+                  )}                
 
                 <div className="flex items-center justify-between text-sm mb-4" style={{ color: 'var(--color-textSecondary)' }}>
                   <span>Created {formatDate(item.createdAt)}</span>
-                  <span className="capitalize">{item.type}</span>
+                  <span className="capitalize">{item.type.toLowerCase()}</span>
                 </div>
 
                 <div className="flex items-center space-x-2">
@@ -186,7 +198,7 @@ export default function DraftsPage() {
                     style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}
                   >
                     <Edit size={14} />
-                    <span>Continue</span>
+                    <span>Edit</span>
                   </Link>
                   <button
                     onClick={() => {

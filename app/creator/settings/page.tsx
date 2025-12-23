@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Settings, 
   Bell, 
@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 
 export default function CreatorSettingsPage() {
-  const [settings, setSettings] = useState({
+  const [settings, setSettings] = useState<any>({
     notifications: {
       emailComments: true,
       emailLikes: false,
@@ -32,16 +32,45 @@ export default function CreatorSettingsPage() {
 
   const [activeTab, setActiveTab] = useState('notifications');
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch('/api/v1/settings');
+        if (res.ok) {
+          const data = await res.json();
+          // Merge fetched settings with defaults
+          setSettings((prev: any) => ({
+            notifications: { ...prev.notifications, ...data.notifications },
+            privacy: { ...prev.privacy, ...data.privacy },
+            content: { ...prev.content, ...data.content },
+          }));
+        }
+      } catch (error) {
+        console.error('Failed to fetch settings:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchSettings();
+  }, []);
 
   const handleSave = async () => {
     setSaving(true);
-    // Simulate save operation
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    setSaving(false);
+    try {
+      await fetch('/api/v1/settings', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(settings) });
+      // Add a success toast here
+    } catch (error) {
+      console.error('Failed to save settings:', error);
+      // Add an error toast here
+    } finally {
+      setSaving(false);
+    }
   };
 
   const updateSetting = (category: string, key: string, value: any) => {
-    setSettings(prev => ({
+    setSettings((prev: typeof settings) => ({
       ...prev,
       [category]: {
         ...prev[category as keyof typeof prev],
@@ -55,6 +84,14 @@ export default function CreatorSettingsPage() {
     { id: 'privacy', label: 'Privacy', icon: Shield },
     { id: 'content', label: 'Content', icon: Globe }
   ];
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--color-background)' }}>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderColor: 'var(--color-primary)' }}></div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8" style={{ backgroundColor: 'var(--color-background)' }}>
@@ -124,7 +161,7 @@ export default function CreatorSettingsPage() {
                     </div>
                     <input
                       type="checkbox"
-                      checked={settings.notifications.emailComments}
+                      checked={settings.notifications?.emailComments || false}
                       onChange={(e) => updateSetting('notifications', 'emailComments', e.target.checked)}
                       className="rounded"
                     />
@@ -137,7 +174,7 @@ export default function CreatorSettingsPage() {
                     </div>
                     <input
                       type="checkbox"
-                      checked={settings.notifications.emailLikes}
+                      checked={settings.notifications?.emailLikes || false}
                       onChange={(e) => updateSetting('notifications', 'emailLikes', e.target.checked)}
                       className="rounded"
                     />
@@ -150,7 +187,7 @@ export default function CreatorSettingsPage() {
                     </div>
                     <input
                       type="checkbox"
-                      checked={settings.notifications.emailFollows}
+                      checked={settings.notifications?.emailFollows || false}
                       onChange={(e) => updateSetting('notifications', 'emailFollows', e.target.checked)}
                       className="rounded"
                     />
@@ -174,7 +211,7 @@ export default function CreatorSettingsPage() {
                     </div>
                     <input
                       type="checkbox"
-                      checked={settings.privacy.showEmail}
+                      checked={settings.privacy?.showEmail || false}
                       onChange={(e) => updateSetting('privacy', 'showEmail', e.target.checked)}
                       className="rounded"
                     />
@@ -187,7 +224,7 @@ export default function CreatorSettingsPage() {
                     </div>
                     <input
                       type="checkbox"
-                      checked={settings.privacy.allowMessages}
+                      checked={settings.privacy?.allowMessages || false}
                       onChange={(e) => updateSetting('privacy', 'allowMessages', e.target.checked)}
                       className="rounded"
                     />
@@ -200,7 +237,7 @@ export default function CreatorSettingsPage() {
                     </div>
                     <input
                       type="checkbox"
-                      checked={settings.privacy.showStats}
+                      checked={settings.privacy?.showStats || false}
                       onChange={(e) => updateSetting('privacy', 'showStats', e.target.checked)}
                       className="rounded"
                     />
@@ -222,7 +259,7 @@ export default function CreatorSettingsPage() {
                       Default Visibility
                     </label>
                     <select
-                      value={settings.content.defaultVisibility}
+                      value={settings.content?.defaultVisibility || 'public'}
                       onChange={(e) => updateSetting('content', 'defaultVisibility', e.target.value)}
                       className="w-full px-3 py-2 rounded-lg border"
                       style={{
@@ -245,7 +282,7 @@ export default function CreatorSettingsPage() {
                       </div>
                       <input
                         type="checkbox"
-                        checked={settings.content.allowComments}
+                      checked={settings.content?.allowComments || false}
                         onChange={(e) => updateSetting('content', 'allowComments', e.target.checked)}
                         className="rounded"
                       />
@@ -258,7 +295,7 @@ export default function CreatorSettingsPage() {
                       </div>
                       <input
                         type="checkbox"
-                        checked={settings.content.moderateComments}
+                      checked={settings.content?.moderateComments || false}
                         onChange={(e) => updateSetting('content', 'moderateComments', e.target.checked)}
                         className="rounded"
                       />

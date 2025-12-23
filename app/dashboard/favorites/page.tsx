@@ -11,7 +11,6 @@ import {
   Clock,
   BookOpen
 } from 'lucide-react';
-import { contentApi } from '@/lib/api/contentApi';
 import useStore from '@/lib/store/useStore';
 import Image from 'next/image';
 
@@ -19,7 +18,7 @@ interface ContentItem {
   id: string;
   title: string;
   type: string;
-  author: string;
+  author: { name: string };
   status: string;
   publishedAt: string | null;
   createdAt: string;
@@ -37,23 +36,14 @@ export default function FavoritesPage() {
   const [typeFilter, setTypeFilter] = useState('all');
 
   const { user, isAuthenticated, likedContent } = useStore();
-  const router = useRouter();
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      router.push('/auth/login');
-      return;
-    }
-
     const loadFavorites = async () => {
       try {
-        // Get all content and filter by liked content IDs
-        const contentData = await contentApi.getAllContent();
-        const favoriteContent = contentData.content.filter((c: ContentItem) => 
-          likedContent.includes(c.id)
-        );
-        
-        setFavorites(favoriteContent);
+        const res = await fetch('/api/v1/user/favorites');
+        if (!res.ok) throw new Error('Failed to fetch favorites');
+        const data = await res.json();
+        setFavorites(data);
       } catch (error) {
         console.error('Error loading favorites:', error);
       } finally {
@@ -62,12 +52,12 @@ export default function FavoritesPage() {
     };
 
     loadFavorites();
-  }, [isAuthenticated, likedContent, router]);
+  }, []);
 
   const filteredFavorites = favorites.filter((item: ContentItem) => {
     const matchesSearch = searchTerm === '' || 
       item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.author.toLowerCase().includes(searchTerm.toLowerCase());
+      item.author.name.toLowerCase().includes(searchTerm.toLowerCase());
     
     const matchesType = typeFilter === 'all' || item.type === typeFilter;
     
@@ -207,7 +197,7 @@ export default function FavoritesPage() {
                 </p>
                 
                 <div className="flex items-center justify-between text-sm" style={{ color: 'var(--color-textSecondary)' }}>
-                  <span>By {item.author}</span>
+                  <span>By {item.author.name}</span>
                   <div className="flex items-center space-x-4">
                     <span className="flex items-center space-x-1">
                       <Eye size={14} />

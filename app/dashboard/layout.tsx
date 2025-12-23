@@ -18,27 +18,10 @@ export default function DashboardLayout({
       router.push('/auth/login');
       return;
     }
+  }, [isAuthenticated, router]);
 
-    // Redirect admin/editor users to their respective dashboards
-    if (user?.role === 'admin') {
-      router.push('/admin');
-      return;
-    }
-
-    // Redirect editor users to their dashboard
-    if (user?.role === 'editor') {
-      router.push('/editor');
-      return;
-    }
-
-    // Redirect creators to their dashboard
-    if (user?.role === 'creator') {
-      router.push('/creator');
-      return;
-    }
-  }, [isAuthenticated, user, router]);
-
-  if (!isAuthenticated || user?.role === 'admin' || user?.role === 'editor' || user?.role === 'creator') {
+  // The middleware handles role-based redirects. We just need a loading state.
+  if (!isAuthenticated) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--color-background)' }}>
         <div className="animate-spin rounded-full h-12 w-12 border-b-2" style={{ borderColor: 'var(--color-primary)' }}></div>

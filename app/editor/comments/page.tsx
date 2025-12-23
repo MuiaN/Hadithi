@@ -9,21 +9,22 @@ import {
   Search,
   Filter
 } from 'lucide-react';
-import { contentApi } from '@/lib/api/contentApi';
 import useStore from '@/lib/store/useStore';
 import Image from 'next/image';
 
 interface Comment {
   id: string;
   contentId: string;
-  userId: string;
-  userName: string;
-  userAvatar: string;
   comment: string;
   createdAt: string;
-  likes: number;
-  status: 'pending' | 'approved' | 'rejected';
-  contentTitle?: string;
+  // New fields from Prisma
+  author: {
+    name: string;
+    avatar: string | null;
+  };
+  content: {
+    title: string;
+  };
 }
 
 export default function EditorCommentsPage() {
@@ -38,52 +39,15 @@ export default function EditorCommentsPage() {
   useEffect(() => {
     const loadComments = async () => {
       try {
-        // Get all content to map comment content titles
-        const contentData = await contentApi.getAllContent({ includeUnpublished: true });
-        const contentMap = new Map(contentData.content.map((c: any) => [c.id, c.title]));
+        const res = await fetch('/api/v1/editor/comments');
+        if (!res.ok) {
+          throw new Error('Failed to fetch comments');
+        }
+        const allComments: Comment[] = await res.json();
 
-        // Mock comments for moderation
-        const mockComments: Comment[] = [
-          {
-            id: '1',
-            contentId: '1',
-            userId: '4',
-            userName: 'Fatima Okafor',
-            userAvatar: 'https://images.pexels.com/photos/1181686/pexels-photo-1181686.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop',
-            comment: 'This is a beautiful retelling of the Golden Stool legend. I learned about this in school but this version captures the spiritual significance so well.',
-            createdAt: '2024-01-21T14:30:00.000Z',
-            likes: 12,
-            status: 'approved',
-            contentTitle: contentMap.get('1')
-          },
-          {
-            id: '2',
-            contentId: '2',
-            userId: '5',
-            userName: 'John Doe',
-            userAvatar: '',
-            comment: 'This content seems inappropriate and doesn\'t belong here.',
-            createdAt: '2024-02-15T16:20:00.000Z',
-            likes: 0,
-            status: 'pending',
-            contentTitle: contentMap.get('2')
-          },
-          {
-            id: '3',
-            contentId: '3',
-            userId: '6',
-            userName: 'Jane Smith',
-            userAvatar: '',
-            comment: 'Great article! Really helped me understand Ubuntu philosophy better.',
-            createdAt: '2024-02-14T10:30:00.000Z',
-            likes: 3,
-            status: 'pending',
-            contentTitle: contentMap.get('3')
-          }
-        ];
-
-        setComments(mockComments);
-        setFilteredComments(mockComments.filter(c => c.status === 'pending'));
+        // For now, we don't have a status on comments in Prisma, so we show all.
+        // We can add a 'status' field to the Comment model later.
+        setComments(allComments);
       } catch (error) {
         console.error('Error loading comments:', error);
       } finally {
@@ -100,22 +64,23 @@ export default function EditorCommentsPage() {
     if (searchTerm) {
       filtered = filtered.filter(comment =>
         comment.comment.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        comment.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        comment.contentTitle?.toLowerCase().includes(searchTerm.toLowerCase())
+        comment.author.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        comment.content.title?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
-
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(comment => comment.status === statusFilter);
-    }
-
+    
+    // Status filter is disabled for now as the model doesn't support it yet.
+    // if (statusFilter !== 'all') {
+    //   filtered = filtered.filter(comment => comment.status === statusFilter);
+    // }
+    
     setFilteredComments(filtered);
   }, [comments, searchTerm, statusFilter]);
 
   const handleStatusChange = (commentId: string, newStatus: 'approved' | 'rejected') => {
-    setComments(prev => prev.map(comment =>
-      comment.id === commentId ? { ...comment, status: newStatus } : comment
-    ));
+    // This would be an API call to PUT /api/v1/editor/comments/[id]/status
+    // For now, we just remove it from the list to simulate moderation.
+    setComments(prev => prev.filter(comment => comment.id !== commentId));
   };
 
   const getStatusColor = (status: string) => {
@@ -191,10 +156,12 @@ export default function EditorCommentsPage() {
               color: 'var(--color-textPrimary)'
             }}
           >
-            <option value="all">All Status</option>
+            <option value="all">All Comments</option>
+            {/* Re-enable when status is added to Comment model */}
+            {/* <option value="pending">Pending</option>
             <option value="pending">Pending</option>
             <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
+            <option value="rejected">Rejected</option> */}
           </select>
         </div>
       </div>
@@ -220,10 +187,10 @@ export default function EditorCommentsPage() {
             >
               <div className="flex items-start justify-between">
                 <div className="flex items-start space-x-4 flex-1">
-                  {comment.userAvatar ? (
+                  {comment.author.avatar ? (
                     <Image
-                      src={comment.userAvatar}
-                      alt={comment.userName}
+                      src={comment.author.avatar}
+                      alt={comment.author.name}
                       className="w-10 h-10 rounded-full object-cover"
                       width={40}
                       height={40}
@@ -231,7 +198,7 @@ export default function EditorCommentsPage() {
                   ) : (
                     <div className="w-10 h-10 bg-gradient-to-br from-amber-500 to-orange-600 rounded-full flex items-center justify-center">
                       <span className="text-white font-medium text-sm">
-                        {comment.userName.charAt(0).toUpperCase()}
+                        {comment.author.name.charAt(0).toUpperCase()}
                       </span>
                     </div>
                   )}
@@ -239,17 +206,17 @@ export default function EditorCommentsPage() {
                   <div className="flex-1">
                     <div className="flex items-center space-x-2 mb-2">
                       <h3 className="font-medium" style={{ color: 'var(--color-textPrimary)' }}>
-                        {comment.userName}
+                        {comment.author.name}
                       </h3>
                       <span className="text-sm" style={{ color: 'var(--color-textSecondary)' }}>
                         on
                       </span>
                       <span className="text-sm font-medium" style={{ color: 'var(--color-primary)' }}>
-                        {comment.contentTitle}
+                        {comment.content.title}
                       </span>
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(comment.status)}`}>
-                        {comment.status}
-                      </span>
+                      {/* <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(comment.status)}`}>
+                        {comment.status} 
+                      </span> */}
                     </div>
 
                     <p className="mb-3" style={{ color: 'var(--color-textPrimary)' }}>
@@ -259,14 +226,11 @@ export default function EditorCommentsPage() {
                     <div className="flex items-center space-x-4 text-sm" style={{ color: 'var(--color-textSecondary)' }}>
                       <span>{formatDate(comment.createdAt)}</span>
                       <span className="flex items-center space-x-1">
-                        <Eye size={14} />
-                        <span>{comment.likes} likes</span>
                       </span>
                     </div>
                   </div>
                 </div>
 
-                {comment.status === 'pending' && (
                   <div className="flex items-center space-x-2">
                     <button
                       onClick={() => handleStatusChange(comment.id, 'approved')}
@@ -297,7 +261,6 @@ export default function EditorCommentsPage() {
                       <X size={16} />
                     </button>
                   </div>
-                )}
               </div>
             </div>
           ))

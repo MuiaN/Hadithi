@@ -10,20 +10,18 @@ import {
   Edit,
   Search
 } from 'lucide-react';
-import { contentApi } from '@/lib/api/contentApi';
 import useStore from '@/lib/store/useStore';
 import Image from 'next/image';
 
 interface ContentItem {
   id: string;
   title: string;
-  type: string;
-  author: string;
-  status: string;
+  type: 'STORY' | 'ARTICLE' | 'BOOK' | 'PODCAST';
+  author: { name: string };
+  status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
   publishedAt: string | null;
   createdAt: string;
   views: number;
-  likes: number;
   coverImage: string;
   description: string;
 }
@@ -37,18 +35,12 @@ export default function PendingContentPage() {
   const router = useRouter();
 
   useEffect(() => {
-    if (!isAuthenticated || user?.role !== 'editor') {
-      router.push('/auth/login');
-      return;
-    }
-
     const loadPendingContent = async () => {
       try {
-        const contentData = await contentApi.getAllContent({ 
-          includeUnpublished: true
-        });
-        
-        const pending = contentData.content.filter((c: ContentItem) => c.status === 'in-review');
+        // Fetch content with DRAFT status, which represents pending content
+        const res = await fetch('/api/v1/editor/content?status=DRAFT');
+        if (!res.ok) throw new Error('Failed to fetch pending content');
+        const pending = await res.json();
         setPendingContent(pending);
       } catch (error) {
         console.error('Error loading pending content:', error);
@@ -58,11 +50,17 @@ export default function PendingContentPage() {
     };
 
     loadPendingContent();
-  }, [isAuthenticated, user, router]);
+  }, []);
 
   const handleStatusChange = async (contentId: string, newStatus: string) => {
     try {
-      await contentApi.updateContentStatus(contentId, newStatus);
+      const res = await fetch(`/api/v1/editor/content/${contentId}/status`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (!res.ok) throw new Error('Failed to update status');
+
       setPendingContent(prev => prev.filter((item: ContentItem) => item.id !== contentId));
     } catch (error) {
       console.error('Error updating content status:', error);
@@ -79,7 +77,7 @@ export default function PendingContentPage() {
 
   const filteredContent = pendingContent.filter((item: ContentItem) =>
     item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.author.toLowerCase().includes(searchTerm.toLowerCase())
+    item.author.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   if (loading) {
@@ -141,11 +139,11 @@ export default function PendingContentPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center space-x-2 mb-2">
                     <Clock size={16} className="text-blue-500" />
-                    <span className="text-xs font-medium px-2 py-1 rounded-full bg-blue-100 text-blue-600">
+                    <span className="text-xs font-medium px-2 py-1 rounded-full bg-yellow-100 text-yellow-600">
                       Pending Review
                     </span>
                     <span className="px-2 py-1 text-xs rounded-full capitalize" style={{ backgroundColor: 'var(--color-primary)20', color: 'var(--color-primary)' }}>
-                      {item.type}
+                      {item.type.toLowerCase()}
                     </span>
                   </div>
                   <h3 className="font-semibold text-lg mb-2" style={{ color: 'var(--color-textPrimary)' }}>
@@ -155,7 +153,7 @@ export default function PendingContentPage() {
                     {item.description}
                   </p>
                   <div className="flex items-center space-x-4 text-xs" style={{ color: 'var(--color-textTertiary)' }}>
-                    <span>By {item.author}</span>
+                    <span>By {item.author.name}</span>
                     <span>Submitted {formatDate(item.createdAt)}</span>
                   </div>
                 </div>
@@ -177,7 +175,7 @@ export default function PendingContentPage() {
                   <Eye size={16} />
                 </button>
                 <button
-                  onClick={() => handleStatusChange(item.id, 'published')}
+                  onClick={() => handleStatusChange(item.id, 'PUBLISHED')}
                   className="p-2 rounded-lg transition-colors"
                   style={{ color: 'var(--color-success)' }}
                   onMouseEnter={(e) => {
@@ -191,7 +189,7 @@ export default function PendingContentPage() {
                   <CheckCircle size={16} />
                 </button>
                 <button
-                  onClick={() => handleStatusChange(item.id, 'rejected')}
+                  onClick={() => handleStatusChange(item.id, 'ARCHIVED')}
                   className="p-2 rounded-lg transition-colors"
                   style={{ color: 'var(--color-error)' }}
                   onMouseEnter={(e) => {

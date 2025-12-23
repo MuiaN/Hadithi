@@ -11,7 +11,6 @@ import {
   Filter,
   MoreHorizontal
 } from 'lucide-react';
-import { contentApi } from '@/lib/api/contentApi';
 import Image from 'next/image';
 
 interface Comment {
@@ -19,7 +18,7 @@ interface Comment {
   contentId: string;
   userId: string;
   userName: string;
-  userAvatar: string;
+  userAvatar: string | null;
   comment: string;
   createdAt: string;
   likes: number;
@@ -37,76 +36,17 @@ export default function CommentsPage() {
   useEffect(() => {
     const loadComments = async () => {
       try {
-        // Get all content to map comment content titles
-        const contentData = await contentApi.getAllContent({ includeUnpublished: true });
-        const contentMap = new Map(contentData.content.map((c: any) => [c.id, c.title]));
-
-        // Mock comments with status for moderation
-        const mockComments: Comment[] = [
-          {
-            id: '1',
-            contentId: '1',
-            userId: '4',
-            userName: 'Fatima Okafor',
-            userAvatar: 'https://images.pexels.com/photos/1181686/pexels-photo-1181686.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop',
-            comment: 'This is a beautiful retelling of the Golden Stool legend. I learned about this in school but this version captures the spiritual significance so well.',
-            createdAt: '2024-01-21T14:30:00.000Z',
-            likes: 12,
-            status: 'approved',
-            contentTitle: contentMap.get('1')
-          },
-          {
-            id: '2',
-            contentId: '1',
-            userId: '3',
-            userName: 'Amara Kone',
-            userAvatar: 'https://images.pexels.com/photos/1239291/pexels-photo-1239291.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop',
-            comment: 'The way you describe Okomfo Anokye gives me chills! Our ancestors had such powerful wisdom.',
-            createdAt: '2024-01-22T09:15:00.000Z',
-            likes: 8,
-            status: 'approved',
-            contentTitle: contentMap.get('1')
-          },
-          {
-            id: '3',
-            contentId: '5',
-            userId: '4',
-            userName: 'Fatima Okafor',
-            userAvatar: 'https://images.pexels.com/photos/1181686/pexels-photo-1181686.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop',
-            comment: 'Anansi stories always teach such profound lessons. Thank you for sharing this complete version - I only knew fragments before.',
-            createdAt: '2024-02-09T11:45:00.000Z',
-            likes: 15,
-            status: 'approved',
-            contentTitle: contentMap.get('5')
-          },
-          {
-            id: '4',
-            contentId: '2',
-            userId: '5',
-            userName: 'John Doe',
-            userAvatar: '',
-            comment: 'This content seems inappropriate and doesn\'t belong here.',
-            createdAt: '2024-02-15T16:20:00.000Z',
-            likes: 0,
-            status: 'pending',
-            contentTitle: contentMap.get('2')
-          },
-          {
-            id: '5',
-            contentId: '3',
-            userId: '6',
-            userName: 'Jane Smith',
-            userAvatar: '',
-            comment: 'Great article! Really helped me understand Ubuntu philosophy better.',
-            createdAt: '2024-02-14T10:30:00.000Z',
-            likes: 3,
-            status: 'pending',
-            contentTitle: contentMap.get('3')
-          }
-        ];
-
-        setComments(mockComments);
-        setFilteredComments(mockComments);
+        const res = await fetch('/api/v1/admin/comments');
+        const data = await res.json();
+        const formattedComments = data.map((c: any) => ({
+          ...c,
+          userName: c.author.name,
+          userAvatar: c.author.avatar,
+          contentTitle: c.content.title,
+          status: 'approved', // Mock status for now
+        }));
+        setComments(formattedComments);
+        setFilteredComments(formattedComments);
       } catch (error) {
         console.error('Error loading comments:', error);
       } finally {
