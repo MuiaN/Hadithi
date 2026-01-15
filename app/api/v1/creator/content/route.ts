@@ -8,16 +8,14 @@ const createContentSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().min(1, 'Description is required'),
   content: z.string().min(1, 'Content is required'),
-  coverImage: z.string().optional(), // Now expects a Base64 string
   type: z.nativeEnum(ContentType),
-  isFree: z.boolean().optional(),
+  isFree: z.coerce.boolean().optional(),
   subscriptionTier: z.nativeEnum(SubscriptionTier).nullable().optional(),
   readingTime: z.string().optional().or(z.literal('')),
   duration: z.string().optional().or(z.literal('')),
-  audioFile: z.string().optional(),
   tags: z.array(z.string()).optional(),
   seriesId: z.string().cuid().optional().nullable(),
-  chapterNumber: z.number().int().positive().optional().nullable(),
+  chapterNumber: z.coerce.number().int().positive().optional().nullable(),
   galleryId: z.string().cuid().optional().nullable(),
   status: z.nativeEnum(ContentStatus).optional(),
   linkedPodcastId: z.string().cuid().optional().nullable(),
@@ -136,8 +134,28 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
   }
 
-  const body = await req.json();
-  const validation = createContentSchema.safeParse(body);
+  let formData;
+  try {
+    formData = await req.formData();
+  } catch (e) {
+    return NextResponse.json({ message: 'Invalid form data' }, { status: 400 });
+  }
+
+  const rawData: any = {
+    title: formData.get('title'),
+    description: formData.get('description'),
+    content: formData.get('content'),
+    type: formData.get('type'),
+    status: formData.get('status'),
+    isFree: formData.get('isFree') === 'true',
+    subscriptionTier: formData.get('subscriptionTier') || null,
+    duration: formData.get('duration'),
+    seriesId: formData.get('seriesId') === 'null' ? null : formData.get('seriesId'),
+    chapterNumber: formData.get('chapterNumber'),
+    tags: formData.getAll('tags').map(t => t.toString()),
+  };
+
+  const validation = createContentSchema.safeParse(rawData);
 
   if (!validation.success) {
     return NextResponse.json({ errors: validation.error.flatten().fieldErrors }, { status: 400 });
@@ -145,6 +163,9 @@ export async function POST(req: NextRequest) {
 
   // Extract all validated data
   const validatedData = validation.data;
+  
+  const coverImageFile = formData.get('coverImage') as File | null;
+  const audioFile = formData.get('audioFile') as File | null;
 
   if (validatedData.seriesId && (validatedData.chapterNumber === null || validatedData.chapterNumber === undefined)) {
     return NextResponse.json({ message: 'Chapter number is required when content is part of a series' }, { status: 400 });
@@ -176,13 +197,9 @@ export async function POST(req: NextRequest) {
         })),
       } : undefined,
 
-      // Convert Base64 strings to Buffer for Bytes fields
-      coverImage: validatedData.coverImage
-        ? Buffer.from(validatedData.coverImage.split(',')[1], 'base64')
-        : null,
-      audioFile: validatedData.audioFile
-        ? Buffer.from(validatedData.audioFile.split(',')[1], 'base64')
-        : null,
+      // Convert File to Buffer for Bytes fields
+      coverImage: coverImageFile ? Buffer.from(await coverImageFile.arrayBuffer()) : null,
+      audioFile: audioFile ? Buffer.from(await audioFile.arrayBuffer()) : null,
     };
 
     const newContent = await prisma.content.create({

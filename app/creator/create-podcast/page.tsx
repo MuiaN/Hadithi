@@ -58,15 +58,6 @@ export default function CreatePodcastPage() {
 
   const router = useRouter();
 
-  const fileToDataUrl = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  };
-
   const handleSubmit = async (e: React.FormEvent, status: 'DRAFT' | 'PENDING_APPROVAL' = 'DRAFT') => {
     e.preventDefault();
     if (formData.seriesId && (formData.chapterNumber === null || formData.chapterNumber === undefined)) {
@@ -76,47 +67,36 @@ export default function CreatePodcastPage() {
     }
     setSaving(true);
   
-    let coverImageAsDataUrl: string | null = null;
+    const data = new FormData();
+    data.append('title', formData.title);
+    data.append('description', formData.description);
+    data.append('content', formData.content);
+    data.append('type', 'PODCAST');
+    data.append('status', status);
+    data.append('isFree', String(formData.isFree));
+    if (formData.subscriptionTier) data.append('subscriptionTier', formData.subscriptionTier);
+    if (formData.seriesId) data.append('seriesId', formData.seriesId);
+    if (formData.chapterNumber) data.append('chapterNumber', String(formData.chapterNumber));
+    if (formData.duration) data.append('duration', formData.duration);
+    
+    formData.tags.forEach(tag => data.append('tags', tag));
+
     if (coverImageFile) {
-      try {
-        coverImageAsDataUrl = await fileToDataUrl(coverImageFile);
-      } catch (error) {
-        console.error('Failed to read image file:', error);
-        alert('Could not process the image file. Please try another one.');
-        setSaving(false);
-        return;
-      }
+      data.append('coverImage', coverImageFile);
     }
-  
-    let audioFileAsDataUrl: string | null = null;
+
     if (audioFile) {
-      try {
-        audioFileAsDataUrl = await fileToDataUrl(audioFile);
-      } catch (error) {
-        console.error('Failed to read audio file:', error);
-        alert('Could not process the audio file. Please try another one.');
-        setSaving(false);
-        return;
-      }
-    } else {
-      if (status === 'PENDING_APPROVAL') {
+      data.append('audioFile', audioFile);
+    } else if (status === 'PENDING_APPROVAL') {
         alert('An audio file is required to submit a podcast for review.');
         setSaving(false);
         return;
-      }
     }
   
     try {
       const res = await fetch('/api/v1/creator/content', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          coverImage: coverImageAsDataUrl,
-          audioFile: audioFileAsDataUrl,
-          type: 'PODCAST',
-          status: status, // Pass the status to the API
-        }),
+        body: data,
       });
       if (!res.ok) throw new Error('Failed to create podcast'); // Changed from 'content'
       router.push('/creator/content');
