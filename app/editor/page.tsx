@@ -22,12 +22,12 @@ interface ContentItem {
   title: string;
   type: 'STORY' | 'ARTICLE' | 'BOOK' | 'PODCAST';
   author: { name: string };
-  status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+  status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' | 'PENDING_APPROVAL' | 'REJECTED';
   publishedAt: string | null;
   createdAt: string;
   views: number;
   _count: { likes: number };
-  coverImage: string;
+  coverImage: string | null;
   description: string;
 }
 export default function EditorDashboard() {
@@ -37,7 +37,8 @@ export default function EditorDashboard() {
     total: 0,
     published: 0,
     draft: 0, // DRAFT status
-    archived: 0 // ARCHIVED status
+    archived: 0, // ARCHIVED status
+    pendingReview: 0 // PENDING_APPROVAL status
   });
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
@@ -61,12 +62,14 @@ export default function EditorDashboard() {
         const published = contentData.filter((c: ContentItem) => c.status === 'PUBLISHED').length;
         const draft = contentData.filter((c: ContentItem) => c.status === 'DRAFT').length;
         const archived = contentData.filter((c: ContentItem) => c.status === 'ARCHIVED').length;
+        const pendingReview = contentData.filter((c: ContentItem) => c.status === 'PENDING_APPROVAL').length;
 
         setStats({
           total,
           published,
           draft,
           archived,
+          pendingReview,
         });
         setContent(contentData);
         setFilteredContent(contentData);
@@ -125,9 +128,13 @@ export default function EditorDashboard() {
     switch (status) {
       case 'PUBLISHED':
         return <CheckCircle size={16} className="text-green-500" />;
+      case 'PENDING_APPROVAL':
+        return <Clock size={16} className="text-blue-500" />;
       case 'DRAFT':
         return <AlertCircle size={16} className="text-yellow-500" />;
       case 'ARCHIVED':
+        return <XCircle size={16} className="text-red-500" />;
+      case 'REJECTED':
         return <XCircle size={16} className="text-red-500" />;
       default:
         return <AlertCircle size={16} className="text-gray-500" />;
@@ -138,9 +145,13 @@ export default function EditorDashboard() {
     switch (status) {
       case 'PUBLISHED':
         return 'text-green-600 bg-green-100';
+      case 'PENDING_APPROVAL':
+        return 'text-blue-600 bg-blue-100';
       case 'DRAFT':
         return 'text-yellow-600 bg-yellow-100';
       case 'ARCHIVED':
+        return 'text-red-600 bg-red-100';
+      case 'REJECTED':
         return 'text-red-600 bg-red-100';
       default:
         return 'text-gray-600 bg-gray-100';
@@ -200,6 +211,20 @@ export default function EditorDashboard() {
                 </p>
               </div>
               <FileText size={24} style={{ color: 'var(--color-primary)' }} />
+            </div>
+          </div>
+
+          <div className="p-6 rounded-lg" style={{ backgroundColor: 'var(--color-card)', border: '1px solid var(--color-border)' }}>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium" style={{ color: 'var(--color-textSecondary)' }}>
+                  Pending Review
+                </p>
+                <p className="text-2xl font-bold" style={{ color: 'var(--color-textPrimary)' }}>
+                  {stats.pendingReview}
+                </p>
+              </div>
+              <Clock size={24} style={{ color: 'var(--color-info)' }} />
             </div>
           </div>
 
@@ -277,8 +302,10 @@ export default function EditorDashboard() {
               }}
             >
               <option value="all">All Status</option>
+              <option value="PENDING_APPROVAL">Pending Review</option>
               <option value="PUBLISHED">Published</option>
               <option value="DRAFT">Draft</option>
+              <option value="REJECTED">Rejected</option>
               <option value="ARCHIVED">Archived</option>
             </select>
           </div>
@@ -345,8 +372,10 @@ export default function EditorDashboard() {
                           onChange={(e) => handleStatusChange(item.id, e.target.value)}
                           className={`text-xs font-medium px-2 py-1 rounded-full border-0 ${getStatusColor(item.status)}`}
                         >
+                          <option value="PENDING_APPROVAL">Pending</option>
                           <option value="DRAFT">Draft</option>
                           <option value="PUBLISHED">Published</option>
+                          <option value="REJECTED">Rejected</option>
                           <option value="ARCHIVED">Archived</option>
                         </select>
                       </div>

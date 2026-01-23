@@ -108,15 +108,6 @@ export default function EditPodcastPage({ params }: { params: { id: string } }) 
     fetchData();
   }, [cleanId]);
 
-  const fileToDataUrl = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  };
-
   const handleSubmit = async (e: React.FormEvent, status?: 'DRAFT' | 'PENDING_APPROVAL') => {
     e.preventDefault();
 
@@ -127,36 +118,31 @@ export default function EditPodcastPage({ params }: { params: { id: string } }) 
 
     setSaving(true);
 
-    let coverImageAsDataUrl: string | undefined = undefined;
+    const data = new FormData();
+    data.append('title', formData.title);
+    data.append('description', formData.description);
+    data.append('content', formData.content);
+    data.append('isFree', String(formData.isFree));
+    if (formData.subscriptionTier) data.append('subscriptionTier', formData.subscriptionTier);
+    if (formData.duration) data.append('duration', formData.duration);
+    if (formData.seriesId) data.append('seriesId', formData.seriesId);
+    if (formData.chapterNumber) data.append('chapterNumber', String(formData.chapterNumber));
+    if (status) data.append('status', status);
+
+    formData.tags.forEach(tag => data.append('tags', tag));
+
     if (coverImageFile) {
-      coverImageAsDataUrl = await fileToDataUrl(coverImageFile);
+      data.append('coverImage', coverImageFile);
     }
 
-    let audioFileAsDataUrl: string | undefined = undefined;
     if (audioFile) {
-      audioFileAsDataUrl = await fileToDataUrl(audioFile);
+      data.append('audioFile', audioFile);
     }
-
-    const payload = {
-      title: formData.title,
-      description: formData.description,
-      content: formData.content,
-      isFree: formData.isFree,
-      subscriptionTier: formData.subscriptionTier ? formData.subscriptionTier.toUpperCase() : null,
-      tags: formData.tags,
-      duration: formData.duration,
-      seriesId: formData.seriesId,
-      chapterNumber: formData.chapterNumber,
-      ...(coverImageAsDataUrl && { coverImage: coverImageAsDataUrl }),
-      ...(audioFileAsDataUrl && { audioFile: audioFileAsDataUrl }),
-      ...(status && { status }),
-    };
 
     try {
       const res = await fetch(`/api/v1/creator/content/${cleanId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
+        body: data,
       });
       if (!res.ok) {
         const errorData = await res.json();
@@ -297,7 +283,7 @@ export default function EditPodcastPage({ params }: { params: { id: string } }) 
               <div>
                 <label className="block text-sm font-medium mb-2">Audio File</label>
                 <div className="mt-2 flex items-center gap-x-3">
-                  <audio ref={audioRef} src={audioFile ? URL.createObjectURL(audioFile) : formData.audioFile || ''} controls className="w-full max-w-md" />
+                  <audio key={audioFile ? 'new-file' : 'existing-file'} ref={audioRef} src={audioFile ? URL.createObjectURL(audioFile) : formData.audioFile || ''} controls className="w-full max-w-md" />
                   <label htmlFor="audio-file-upload" className="cursor-pointer rounded-md px-2.5 py-1.5 text-sm font-semibold shadow-sm ring-1 ring-inset" style={{ backgroundColor: 'var(--color-backgroundSecondary)', color: 'var(--color-textPrimary)', borderColor: 'var(--color-border)' }}>
                     <span>Change Audio</span>
                     <input id="audio-file-upload" type="file" className="sr-only" accept="audio/mpeg,audio/wav,audio/ogg" onChange={handleAudioFileChange} />

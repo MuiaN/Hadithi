@@ -1,24 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getAuth } from '@/lib/auth';
-import { z, ZodError } from 'zod';
-import { SubscriptionTier } from '@prisma/client';
-
-const galleryImageSchema = z.object({
-  url: z.string().url(),
-  caption: z.string(),
-  alt: z.string(),
-});
-
-const createGallerySchema = z.object({
-  title: z.string().min(1, 'Title is required'),
-  description: z.string().optional().or(z.literal('')),
-  images: z.array(galleryImageSchema).min(1, 'At least one image is required'),
-  tags: z.array(z.string()).optional(),
-  isPublished: z.boolean().optional().default(false),
-  isFree: z.boolean().optional(),
-  subscriptionTier: z.nativeEnum(SubscriptionTier).nullable().optional(),
-});
+import { SubscriptionTier, ContentStatus } from '@prisma/client';
+import { writeFile, mkdir } from 'fs/promises';
+import path from 'path';
 
 /**
  * @swagger
@@ -55,10 +40,8 @@ export async function GET(req: NextRequest) {
   const statusFilter = searchParams.get('status');
   const where: any = { authorId: user.id }; // Initialize where clause
 
-  if (statusFilter === 'published') {
-    where.isPublished = true;
-  } else if (statusFilter === 'draft') {
-    where.isPublished = false;
+  if (statusFilter && statusFilter !== 'all') {
+    where.status = statusFilter;
   }
 
   try {
@@ -81,28 +64,58 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
   }
 
-  const body = await req.json();
-  const validation = createGallerySchema.safeParse(body);
-
-  if (!validation.success) {
-    return NextResponse.json({ errors: validation.error.flatten().fieldErrors }, { status: 400 }); // Changed to ZodError
+  let formData;
+  try {
+    formData = await req.formData();
+  } catch (e) {
+    return NextResponse.json({ message: 'Invalid form data' }, { status: 400 });
   }
 
-  const { title, description, images, tags, isPublished, isFree, subscriptionTier } = validation.data;
+  const title = formData.get('title') as string;
+  const description = formData.get('description') as string;
+  const status = formData.get('status') as ContentStatus;
+  const isFree = formData.get('isFree') === 'true';
+  const subscriptionTier = formData.get('subscriptionTier') as SubscriptionTier | null;
+  const tags = formData.getAll('tags').map(t => t.toString());
+  
+  const images = formData.getAll('images') as File[];
+  const captions = formData.getAll('captions') as string[];
+  const alts = formData.getAll('alts') as string[];
+
+  if (!title) {
+    return NextResponse.json({ message: 'Title is required' }, { status: 400 });
+  }
+
+  if (images.length === 0) {
+    return NextResponse.json({ message: 'At least one image is required' }, { status: 400 });
+  }
 
   try {
+    const savedImagesData = [];
+    for (let i = 0; i < images.length; i++) {
+      const file = images[i];
+      const caption = captions[i] || '';
+      const alt = alts[i] || '';
+      
+      const url = await saveGalleryImage(file, title);
+      if (url) {
+        savedImagesData.push({ url, caption, alt });
+      }
+    }
+
     const newGallery = await prisma.gallery.create({
       data: {
         title,
         description: description || '',
         authorId: user.id,
-        isPublished: false, // All new galleries start as drafts
-        publishedAt: null,
+        status: status || ContentStatus.DRAFT,
+        isPublished: status === ContentStatus.PUBLISHED,
+        publishedAt: status === ContentStatus.PUBLISHED ? new Date() : null,
         isFree: isFree ?? true,
         subscriptionTier: isFree ? null : subscriptionTier, // Ensure null if free
         tags: tags || [],
         images: {
-          create: images.map((image) => ({
+          create: savedImagesData.map((image) => ({
             url: image.url,
             caption: image.caption,
             alt: image.alt,
@@ -113,10 +126,31 @@ export async function POST(req: NextRequest) {
     });
     return NextResponse.json(newGallery, { status: 201 });
   } catch (error: any) {
-    if (error instanceof ZodError) {
-      return NextResponse.json({ errors: error.flatten().fieldErrors }, { status: 400 });
-    }
     console.error('Failed to create gallery:', error);
     return NextResponse.json({ message: 'An internal server error occurred' }, { status: 500 });
   }
+}
+
+// Helper to save gallery image
+async function saveGalleryImage(file: File, galleryTitle: string): Promise<string | null> {
+  if (!file) return null;
+
+  const arrayBuffer = await file.arrayBuffer();
+  const uint8Array = new Uint8Array(arrayBuffer);
+  
+  // Sanitize gallery title for folder name
+  const sanitizedTitle = galleryTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+  const filename = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+  
+  // Define the path: public/media/galleries/[gallery name]
+  const uploadDir = path.join(process.cwd(), 'public', 'media', 'galleries', sanitizedTitle);
+  
+  // Ensure directory exists
+  await mkdir(uploadDir, { recursive: true });
+  
+  // Write file
+  await writeFile(path.join(uploadDir, filename), uint8Array);
+  
+  // Return the public URL
+  return `/media/galleries/${sanitizedTitle}/${filename}`;
 }

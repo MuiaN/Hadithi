@@ -10,7 +10,14 @@ import {
   Trash2,
   Search, 
   Filter,
-  Plus
+  Plus,
+  LayoutGrid,
+  List,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Clock,
+  BarChart2
 } from 'lucide-react';
 import useStore from '@/lib/store/useStore';
 import Image from 'next/image';
@@ -34,6 +41,7 @@ export default function CreatorContentPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
   const { user } = useStore();
   const router = useRouter();
@@ -57,7 +65,7 @@ export default function CreatorContentPage() {
   }, []);
 
   const handleDelete = async (contentId: string) => {
-    if (!confirm('Are you sure you want to archive this content?')) {
+    if (!confirm('Are you sure you want to delete this content?')) {
       return;
     }
 
@@ -67,15 +75,15 @@ export default function CreatorContentPage() {
       });
 
       if (!res.ok) {
-        throw new Error('Failed to archive content');
+        throw new Error('Failed to delete content');
       }
 
       // Update the state to reflect the change
-      setContent(prevContent => prevContent.map(item => item.id === contentId ? { ...item, status: 'ARCHIVED' } : item));
-      alert('Content archived successfully.');
+      setContent(prevContent => prevContent.filter(item => item.id !== contentId));
+      alert('Content deleted successfully.');
     } catch (error) {
-      console.error('Error archiving content:', error);
-      alert('Failed to archive content.');
+      console.error('Error deleting content:', error);
+      alert('Failed to delete content.');
     }
   };
 
@@ -116,10 +124,18 @@ export default function CreatorContentPage() {
         return 'text-yellow-600 bg-yellow-100';
       case 'PENDING_APPROVAL':
         return 'text-blue-600 bg-blue-100';
-      case 'ARCHIVED':
-        return 'text-red-600 bg-red-100';
       default:
         return 'text-gray-600 bg-gray-100';
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'PUBLISHED': return <CheckCircle size={16} className="text-green-500" />;
+      case 'PENDING_APPROVAL': return <Clock size={16} className="text-blue-500" />;
+      case 'DRAFT': return <AlertCircle size={16} className="text-yellow-500" />;
+      case 'REJECTED': return <XCircle size={16} className="text-red-500" />;
+      default: return <XCircle size={16} className="text-red-500" />;
     }
   };
 
@@ -156,8 +172,9 @@ export default function CreatorContentPage() {
       </div>
 
       {/* Filters */}
-      <div className="mb-6 flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
+      <div className="mb-6 flex flex-col sm:flex-row gap-4 justify-between items-center">
+        <div className="flex flex-1 gap-4 w-full">
+          <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2" size={16} style={{ color: 'var(--color-textTertiary)' }} />
           <input
             type="text"
@@ -171,9 +188,9 @@ export default function CreatorContentPage() {
               color: 'var(--color-textPrimary)'
             }}
           />
-        </div>
+          </div>
 
-        <div className="flex items-center space-x-2">
+          <div className="flex items-center space-x-2">
           <Filter size={16} style={{ color: 'var(--color-textSecondary)' }} />
           <select
             value={statusFilter}
@@ -190,8 +207,24 @@ export default function CreatorContentPage() {
             <option value="DRAFT">Draft</option>
             <option value="PENDING_APPROVAL">In Review</option>
             <option value="REJECTED">Rejected</option>
-            <option value="ARCHIVED">Archived</option>
           </select>
+          </div>
+        </div>
+
+        {/* View Toggle */}
+        <div className="flex items-center bg-[var(--color-input)] rounded-lg border border-[var(--color-inputBorder)] p-1">
+          <button
+            onClick={() => setViewMode('grid')}
+            className={`p-2 rounded-md transition-colors ${viewMode === 'grid' ? 'bg-[var(--color-primary)] text-white' : 'text-[var(--color-textSecondary)] hover:bg-[var(--color-backgroundSecondary)]'}`}
+          >
+            <LayoutGrid size={20} />
+          </button>
+          <button
+            onClick={() => setViewMode('list')}
+            className={`p-2 rounded-md transition-colors ${viewMode === 'list' ? 'bg-[var(--color-primary)] text-white' : 'text-[var(--color-textSecondary)] hover:bg-[var(--color-backgroundSecondary)]'}`}
+          >
+            <List size={20} />
+          </button>
         </div>
       </div>
 
@@ -218,7 +251,8 @@ export default function CreatorContentPage() {
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        viewMode === 'grid' ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredContent.map((item) => (
             <div
               key={item.id}
@@ -232,9 +266,12 @@ export default function CreatorContentPage() {
                   className="w-full h-full object-cover"
                   layout="fill"
                 />
-                <div className="absolute top-4 left-4">
+                <div className="absolute top-4 left-4 flex flex-col gap-2 items-start">
                   <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(item.status)}`}>
                     {item.status.toLowerCase()}
+                  </span>
+                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-black/60 text-white backdrop-blur-md capitalize">
+                    {item.type.toLowerCase()}
                   </span>
                 </div>
                 <div className="absolute top-2 right-2">
@@ -276,18 +313,105 @@ export default function CreatorContentPage() {
                     <span>View</span>
                   </Link>
                   <Link
-                    href={`/creator/edit/${item.id}`}
+                    href={item.type === 'PODCAST' ? `/creator/podcast/edit/${item.id}` : `/creator/edit/${item.id}`}
                     className="flex-1 flex items-center justify-center space-x-1 py-2 px-3 rounded-lg text-sm transition-colors"
                     style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}
                   >
                     <Edit size={14} />
                     <span>Edit</span>
                   </Link>
+                  <Link
+                    href={`/creator/analytics/${item.id}`}
+                    className="flex-1 flex items-center justify-center space-x-1 py-2 px-3 rounded-lg text-sm transition-colors"
+                    style={{ backgroundColor: 'var(--color-backgroundSecondary)', color: 'var(--color-textPrimary)' }}
+                  >
+                    <BarChart2 size={14} />
+                    <span>Stats</span>
+                  </Link>
                 </div>
               </div>
             </div>
           ))}
-        </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {filteredContent.map((item) => (
+              <div 
+                key={item.id}
+                className="flex items-center justify-between p-4 rounded-lg border transition-colors hover:shadow-sm"
+                style={{ backgroundColor: 'var(--color-card)', borderColor: 'var(--color-border)' }}
+              >
+                <div className="flex items-start space-x-4 flex-1">
+                  <Image
+                    src={item.coverImage || '/images/placeholder.png'}
+                    alt={item.title}
+                    width={64}
+                    height={64}
+                    className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center space-x-2 mb-1">
+                      {getStatusIcon(item.status)}
+                      <span className="text-xs font-medium" style={{ color: 'var(--color-textSecondary)' }}>
+                        {item.status.toLowerCase()}
+                      </span>
+                      <span className="px-2 py-1 text-xs rounded-full capitalize" style={{ backgroundColor: 'var(--color-primary)20', color: 'var(--color-primary)' }}>
+                        {item.type.toLowerCase()}
+                      </span>
+                    </div>
+                    <h3 className="font-medium mb-1 line-clamp-1" style={{ color: 'var(--color-textPrimary)' }}>
+                      {item.title}
+                    </h3>
+                    <p className="text-sm line-clamp-2 mb-2" style={{ color: 'var(--color-textSecondary)' }}>
+                      {item.description}
+                    </p>
+                    <div className="flex items-center space-x-4 text-xs" style={{ color: 'var(--color-textTertiary)' }}>
+                      <span>Created {formatDateTime(item.createdAt)}</span>
+                      {item.publishedAt && (
+                        <span>Published {formatDateTime(item.publishedAt)}</span>
+                      )}
+                      <span className="flex items-center space-x-1">
+                        <Eye size={12} />
+                        <span>{item.views}</span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <Link
+                    href={item.type === 'PODCAST' ? `/creator/podcast/${item.id}` : `/creator/content/${item.id}`}
+                    className="p-2 rounded-lg transition-colors text-gray-500 hover:bg-gray-500/10"
+                    title="View"
+                  >
+                    <Eye size={16} />
+                  </Link>
+                  <Link
+                    href={item.type === 'PODCAST' ? `/creator/podcast/edit/${item.id}` : `/creator/edit/${item.id}`}
+                    className="p-2 rounded-lg transition-colors text-blue-500 hover:bg-blue-500/10"
+                    title="Edit"
+                  >
+                    <Edit size={16} />
+                  </Link>
+                  <Link
+                    href={`/creator/analytics/${item.id}`}
+                    className="p-2 rounded-lg transition-colors text-purple-500 hover:bg-purple-500/10"
+                    title="Analytics"
+                  >
+                    <BarChart2 size={16} />
+                  </Link>
+                  <button
+                    onClick={() => handleDelete(item.id)}
+                    className="p-2 rounded-lg transition-colors text-red-500 hover:bg-red-500/10"
+                    title="Archive"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )
       )}
     </div>
   );

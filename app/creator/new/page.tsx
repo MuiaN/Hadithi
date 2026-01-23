@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Save, 
@@ -14,8 +14,7 @@ import {
   Plus,
   Send,
   Image as ImageIcon,
-  Link2,
-  Podcast
+  Link2
 } from 'lucide-react';
 import useStore from '@/lib/store/useStore';
 import Image from 'next/image';
@@ -37,8 +36,6 @@ export default function NewContentPage() {
     rejectionReason: null, // Added rejectionReason
     seriesId: null,
     chapterNumber: null as number | null,
-    audioUrl: '',
-    duration: '',
     galleryId: null,
     linkedPodcastId: null,
   });
@@ -54,18 +51,10 @@ export default function NewContentPage() {
   const [galleriesList, setGalleriesList] = useState<{ id: string; title: string }[]>([]);
   const [podcastsList, setPodcastsList] = useState<{ id: string; title: string }[]>([]);
   const [existingTags, setExistingTags] = useState<string[]>([]);
+  const [tagInputFocused, setTagInputFocused] = useState(false);
 
   const { user } = useStore();
   const router = useRouter();
-
-  const fileToDataUrl = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  };
 
   const handleSubmit = async (e: React.FormEvent, status: 'DRAFT' | 'PENDING_APPROVAL' = 'DRAFT') => {
     e.preventDefault();
@@ -77,33 +66,30 @@ export default function NewContentPage() {
       return;
     }
 
-    let coverImageAsDataUrl: string | null = null;
+    const data = new FormData();
+    data.append('title', formData.title);
+    data.append('description', formData.description);
+    data.append('content', formData.content);
+    data.append('type', formData.type.toUpperCase());
+    data.append('status', status);
+    data.append('isFree', String(formData.isFree));
+    
+    if (formData.subscriptionTier) data.append('subscriptionTier', formData.subscriptionTier);
+    if (formData.seriesId) data.append('seriesId', formData.seriesId);
+    if (formData.chapterNumber) data.append('chapterNumber', String(formData.chapterNumber));
+    if (formData.galleryId) data.append('galleryId', formData.galleryId);
+    if (formData.linkedPodcastId) data.append('linkedPodcastId', formData.linkedPodcastId);
+    
+    formData.tags.forEach(tag => data.append('tags', tag));
 
-    // 1. Convert image to Base64 Data URL if a new one is selected
     if (coverImageFile) {
-      try {
-        coverImageAsDataUrl = await fileToDataUrl(coverImageFile);
-      } catch (error) {
-        console.error('Failed to read image file:', error);
-        alert('Could not process the image file. Please try another one.');
-        setSaving(false);
-        return;
-      }
+      data.append('coverImage', coverImageFile);
     }
 
     try {
       const res = await fetch('/api/v1/creator/content', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...formData,
-          coverImage: coverImageAsDataUrl, // Send the Base64 string
-          chapterNumber: formData.seriesId ? formData.chapterNumber : null,
-          galleryId: formData.galleryId || null,
-          linkedPodcastId: formData.linkedPodcastId || null,
-          type: formData.type.toUpperCase(),
-          status: status, // Pass the status to the API
-        }),
+        body: data,
       });
       if (!res.ok) throw new Error('Failed to create content');
       router.push('/creator');
@@ -182,6 +168,12 @@ export default function NewContentPage() {
         tags: [...prev.tags, newTag.trim()]
       }));
       setNewTag('');
+    }
+  };
+
+  const addExistingTag = (tag: string) => {
+    if (!formData.tags.includes(tag)) {
+      setFormData(prev => ({ ...prev, tags: [...prev.tags, tag] }));
     }
   };
 
@@ -455,30 +447,56 @@ export default function NewContentPage() {
                 <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-textPrimary)' }}>
                   Tags
                 </label>
-                <div className="flex space-x-2 mb-3">
-                  <input
-                    type="text"
-                    value={newTag}
-                    onChange={(e) => setNewTag(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
-                    className="flex-1 px-3 py-2 rounded-lg border"
-                    style={{
-                      backgroundColor: 'var(--color-input)',
-                      borderColor: 'var(--color-inputBorder)',
-                      color: 'var(--color-textPrimary)'
-                    }}
-                    placeholder="Add a tag..."
-                  />
-                  <button
-                    type="button"
-                    onClick={addTag}
-                    className="px-4 py-2 rounded-lg transition-colors"
-                    style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}
-                  >
-                    <Plus size={16} />
-                  </button>
+                <div className="relative">
+                  <div className="flex space-x-2 mb-3">
+                    <input
+                      type="text"
+                      value={newTag}
+                      onChange={(e) => setNewTag(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
+                      onFocus={() => setTagInputFocused(true)}
+                      onBlur={() => setTimeout(() => setTagInputFocused(false), 150)}
+                      className="flex-1 px-3 py-2 rounded-lg border"
+                      style={{
+                        backgroundColor: 'var(--color-input)',
+                        borderColor: 'var(--color-inputBorder)',
+                        color: 'var(--color-textPrimary)'
+                      }}
+                      placeholder="Add a tag..."
+                    />
+                    <button
+                      type="button"
+                      onClick={addTag}
+                      className="px-4 py-2 rounded-lg transition-colors"
+                      style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}
+                    >
+                      <Plus size={16} />
+                    </button>
+                  </div>
+                  {tagInputFocused && (
+                    <div className="absolute z-10 w-full max-h-48 overflow-y-auto p-2 rounded-lg border mt-1" style={{ backgroundColor: 'var(--color-card)', borderColor: 'var(--color-border)' }}>
+                      <h4 className="text-xs font-semibold uppercase text-gray-400 mb-2 px-1">Available Tags</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {existingTags
+                          .filter(tag => !formData.tags.includes(tag))
+                          .filter(tag => tag.toLowerCase().includes(newTag.toLowerCase()))
+                          .map(tag => (
+                            <button
+                              key={tag}
+                              type="button"
+                              onMouseDown={() => addExistingTag(tag)}
+                              className="px-3 py-1 text-sm rounded-full transition-colors"
+                              style={{ backgroundColor: 'var(--color-backgroundSecondary)', color: 'var(--color-textPrimary)', border: '1px solid var(--color-border)' }}
+                            >
+                              {tag}
+                            </button>
+                          ))
+                        }
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 mt-4">
                   {formData.tags.map((tag) => (
                     <span
                       key={tag}

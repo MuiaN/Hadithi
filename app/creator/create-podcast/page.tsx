@@ -52,6 +52,8 @@ export default function CreatePodcastPage() {
   const [newSeriesDescription, setNewSeriesDescription] = useState('');
   const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
   const [coverImagePreview, setCoverImagePreview] = useState<string | null>(null);
+  const [existingTags, setExistingTags] = useState<string[]>([]);
+  const [tagInputFocused, setTagInputFocused] = useState(false);
   const [audioPreviewUrl, setAudioPreviewUrl] = useState<string>('');
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -99,7 +101,7 @@ export default function CreatePodcastPage() {
         body: data,
       });
       if (!res.ok) throw new Error('Failed to create podcast'); // Changed from 'content'
-      router.push('/creator/content');
+      router.push('/creator');
     } catch (error) {
       console.error('Error creating podcast:', error);
     } finally {
@@ -110,11 +112,13 @@ export default function CreatePodcastPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [seriesRes] = await Promise.all([
+        const [seriesRes, tagsRes] = await Promise.all([
           fetch('/api/v1/creator/series'),
+          fetch('/api/v1/creator/tags'),
         ]);
 
         if (seriesRes.ok) setSeriesList(await seriesRes.json());
+        if (tagsRes.ok) setExistingTags(await tagsRes.json());
 
       } catch (error) {
         console.error('Error fetching initial data:', error);
@@ -177,6 +181,12 @@ export default function CreatePodcastPage() {
       ...prev,
       [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
     }));
+  };
+
+  const addExistingTag = (tag: string) => {
+    if (!formData.tags.includes(tag)) {
+      setFormData(prev => ({ ...prev, tags: [...prev.tags, tag] }));
+    }
   };
 
   const addTag = () => {
@@ -268,30 +278,56 @@ export default function CreatePodcastPage() {
                 <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-textPrimary)' }}>
                   Tags
                 </label>
-                <div className="flex space-x-2 mb-3">
-                  <input
-                    type="text"
-                    value={newTag}
-                    onChange={(e) => setNewTag(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
-                    className="flex-1 px-3 py-2 rounded-lg border"
-                    style={{
-                      backgroundColor: 'var(--color-input)',
-                      borderColor: 'var(--color-inputBorder)',
-                      color: 'var(--color-textPrimary)'
-                    }}
-                    placeholder="Add a tag..."
-                  />
-                  <button
-                    type="button"
-                    onClick={addTag}
-                    className="px-4 py-2 rounded-lg transition-colors"
-                    style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}
-                  >
-                    <Plus size={16} />
-                  </button>
+                <div className="relative">
+                  <div className="flex space-x-2 mb-3">
+                    <input
+                      type="text"
+                      value={newTag}
+                      onChange={(e) => setNewTag(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
+                      onFocus={() => setTagInputFocused(true)}
+                      onBlur={() => setTimeout(() => setTagInputFocused(false), 150)}
+                      className="flex-1 px-3 py-2 rounded-lg border"
+                      style={{
+                        backgroundColor: 'var(--color-input)',
+                        borderColor: 'var(--color-inputBorder)',
+                        color: 'var(--color-textPrimary)'
+                      }}
+                      placeholder="Add a tag..."
+                    />
+                    <button
+                      type="button"
+                      onClick={addTag}
+                      className="px-4 py-2 rounded-lg transition-colors"
+                      style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}
+                    >
+                      <Plus size={16} />
+                    </button>
+                  </div>
+                  {tagInputFocused && (
+                    <div className="absolute z-10 w-full max-h-48 overflow-y-auto p-2 rounded-lg border mt-1" style={{ backgroundColor: 'var(--color-card)', borderColor: 'var(--color-border)' }}>
+                      <h4 className="text-xs font-semibold uppercase text-gray-400 mb-2 px-1">Available Tags</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {existingTags
+                          .filter(tag => !formData.tags.includes(tag))
+                          .filter(tag => tag.toLowerCase().includes(newTag.toLowerCase()))
+                          .map(tag => (
+                            <button
+                              key={tag}
+                              type="button"
+                              onMouseDown={() => addExistingTag(tag)}
+                              className="px-3 py-1 text-sm rounded-full transition-colors"
+                              style={{ backgroundColor: 'var(--color-backgroundSecondary)', color: 'var(--color-textPrimary)', border: '1px solid var(--color-border)' }}
+                            >
+                              {tag}
+                            </button>
+                          ))
+                        }
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2 mt-4">
                   {formData.tags.map((tag) => (
                     <span
                       key={tag}

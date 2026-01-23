@@ -3,6 +3,8 @@ import prisma from '@/lib/prisma';
 import { getAuth } from '@/lib/auth';
 import { z, ZodError } from 'zod'; // Ensure ZodError is imported
 import { ContentType, ContentStatus, SubscriptionTier, Prisma } from '@prisma/client'; // Import Prisma
+import { writeFile, mkdir } from 'fs/promises';
+import path from 'path';
 
 const createContentSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -63,6 +65,7 @@ export async function GET(req: NextRequest) {
 
   const where: any = {
     authorId: user.id,
+    status: { not: 'ARCHIVED' }, // Default to excluding archived content
   };
 
   if (seriesIdFilter) {
@@ -73,7 +76,7 @@ export async function GET(req: NextRequest) {
     where.type = typeFilter;
     // No status filter here, so the creator can link their own unpublished podcasts.
   } else if (statusFilter) {
-    where.status = statusFilter;
+    where.status = statusFilter; // Override default if specific status is requested
   }
 
   try {
@@ -88,19 +91,32 @@ export async function GET(req: NextRequest) {
       orderBy: { createdAt: 'desc' },
     });
 
-    // Convert coverImage Buffer to base64 data URL for client-side rendering
-    const contentWithImages = content.map((item: any) => ({
-      ...item,
-      coverImage: item.coverImage
-        ? `data:image/jpeg;base64,${Buffer.from(item.coverImage).toString('base64')}`
-        : null,
-    }));
-
-    return NextResponse.json(contentWithImages);
+    return NextResponse.json(content);
   } catch (error) {
     console.error('Failed to fetch content:', error);
     return NextResponse.json({ message: 'An internal server error occurred' }, { status: 500 });
   }
+}
+
+// Helper to save file to disk
+async function saveFileToDisk(file: File, subfolder: string): Promise<string | null> {
+  if (!file) return null;
+
+  const arrayBuffer = await file.arrayBuffer();
+  const uint8Array = new Uint8Array(arrayBuffer);
+  // Create a unique filename
+  const filename = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+  // Define the path: public/media/{subfolder}
+  const uploadDir = path.join(process.cwd(), 'public', 'media', subfolder);
+  
+  // Ensure directory exists
+  await mkdir(uploadDir, { recursive: true });
+  
+  // Write file
+  await writeFile(path.join(uploadDir, filename), uint8Array);
+  
+  // Return the public URL
+  return `/media/${subfolder}/${filename}`;
 }
 
 /**
@@ -149,9 +165,11 @@ export async function POST(req: NextRequest) {
     status: formData.get('status'),
     isFree: formData.get('isFree') === 'true',
     subscriptionTier: formData.get('subscriptionTier') || null,
-    duration: formData.get('duration'),
+    duration: formData.get('duration') || undefined,
     seriesId: formData.get('seriesId') === 'null' ? null : formData.get('seriesId'),
-    chapterNumber: formData.get('chapterNumber'),
+    chapterNumber: formData.get('chapterNumber') ? Number(formData.get('chapterNumber')) : undefined,
+    galleryId: formData.get('galleryId') === 'null' ? null : formData.get('galleryId'),
+    linkedPodcastId: formData.get('linkedPodcastId') === 'null' ? null : formData.get('linkedPodcastId'),
     tags: formData.getAll('tags').map(t => t.toString()),
   };
 
@@ -170,6 +188,10 @@ export async function POST(req: NextRequest) {
   if (validatedData.seriesId && (validatedData.chapterNumber === null || validatedData.chapterNumber === undefined)) {
     return NextResponse.json({ message: 'Chapter number is required when content is part of a series' }, { status: 400 });
   }
+
+  // Save files to disk
+  const coverImageUrl = coverImageFile ? await saveFileToDisk(coverImageFile, 'images') : null;
+  const audioFileUrl = audioFile ? await saveFileToDisk(audioFile, 'podcasts') : null;
 
   try {
     // Construct the data object for Prisma explicitly
@@ -197,9 +219,9 @@ export async function POST(req: NextRequest) {
         })),
       } : undefined,
 
-      // Convert File to Buffer for Bytes fields
-      coverImage: coverImageFile ? Buffer.from(await coverImageFile.arrayBuffer()) : null,
-      audioFile: audioFile ? Buffer.from(await audioFile.arrayBuffer()) : null,
+      // Store URLs
+      coverImage: coverImageUrl,
+      audioFile: audioFileUrl,
     };
 
     const newContent = await prisma.content.create({

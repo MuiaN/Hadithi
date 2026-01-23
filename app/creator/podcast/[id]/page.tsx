@@ -26,7 +26,7 @@ interface PodcastData {
   content: string; // For show notes
   coverImage: string | null;
   duration: string | null;
-  audioFile: string | null; // This will be a data URL for the audio
+  audioFile: string | null; // Path to the audio file
   createdAt: string;
   status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' | 'PENDING_APPROVAL' | 'REJECTED';
   publishedAt: string;
@@ -155,7 +155,7 @@ export default function CreatorPodcastViewPage({ params }: { params: { id:string
         {/* Audio Player */}
         {podcast.audioFile && (
           <div className="mb-8">
-            <audio controls className="w-full">
+            <audio key={podcast.audioFile} controls className="w-full">
               <source src={podcast.audioFile} type="audio/mpeg" />
               Your browser does not support the audio element.
             </audio>

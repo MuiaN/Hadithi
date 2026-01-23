@@ -18,7 +18,7 @@ interface Gallery {
   title: string;
   description: string;
   images: GalleryImage[];
-  isPublished: boolean;
+  status: 'DRAFT' | 'PUBLISHED' | 'PENDING_APPROVAL' | 'REJECTED' | 'ARCHIVED';
   createdAt: string;
   tags: string[];
   viewCount: number;
@@ -100,10 +100,13 @@ export default function GalleryViewPage({ params }: { params: { id: string } }) 
 
   const formatDate = (dateString: string) => new Date(dateString).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 
-  const StatusBadge = ({ isPublished }: { isPublished: boolean }) => {
-    const statusInfo = isPublished
-      ? { text: 'Published', icon: <CheckCircle size={14} />, color: 'var(--color-success)' }
-      : { text: 'Draft', icon: <Edit size={14} />, color: 'var(--color-textSecondary)' };
+  const StatusBadge = ({ status }: { status: string }) => {
+    const statusInfo = {
+      PUBLISHED: { text: 'Published', icon: <CheckCircle size={14} />, color: 'var(--color-success)' },
+      PENDING_APPROVAL: { text: 'In Review', icon: <Clock size={14} />, color: 'var(--color-info)' },
+      DRAFT: { text: 'Draft', icon: <Edit size={14} />, color: 'var(--color-textSecondary)' },
+      REJECTED: { text: 'Rejected', icon: <XCircle size={14} />, color: 'var(--color-error)' },
+    }[status] || { text: 'Unknown', icon: <AlertCircle size={14} />, color: 'var(--color-textSecondary)' };
 
     return (
       <div 
@@ -165,7 +168,7 @@ export default function GalleryViewPage({ params }: { params: { id: string } }) 
             </div>
           </div>
         </div>
-        <StatusBadge isPublished={gallery.isPublished} />
+        <StatusBadge status={gallery.status} />
       </header>
 
       {/* Main Content Area */}

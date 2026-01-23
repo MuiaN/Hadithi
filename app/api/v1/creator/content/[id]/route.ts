@@ -3,6 +3,8 @@ import prisma from '@/lib/prisma';
 import { getAuth } from '@/lib/auth';
 import { z } from 'zod';
 import { ContentType, ContentStatus, SubscriptionTier } from '@prisma/client';
+import { writeFile, mkdir, unlink } from 'fs/promises';
+import path from 'path';
 
 const updateContentSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -29,8 +31,39 @@ type RelatedContent = {
   type: ContentType;
   status: ContentStatus;
   chapterNumber: number | null;
-  coverImage: Buffer | null;
+  coverImage: string | null;
 };
+
+// Helper to save file to disk
+async function saveFileToDisk(file: File, subfolder: string): Promise<string | null> {
+  if (!file) return null;
+
+  const arrayBuffer = await file.arrayBuffer();
+  const uint8Array = new Uint8Array(arrayBuffer);
+  const filename = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+  const uploadDir = path.join(process.cwd(), 'public', 'media', subfolder);
+  
+  await mkdir(uploadDir, { recursive: true });
+  await writeFile(path.join(uploadDir, filename), uint8Array);
+  
+  return `/media/${subfolder}/${filename}`;
+}
+
+// Helper to delete file from disk
+async function deleteFileFromDisk(fileUrl: string | null) {
+  if (!fileUrl) return;
+  
+  // Check if it's a local file (starts with /media/)
+  if (fileUrl.startsWith('/media/')) {
+    try {
+      const filePath = path.join(process.cwd(), 'public', fileUrl);
+      await unlink(filePath);
+    } catch (error) {
+      console.error(`Failed to delete file: ${fileUrl}`, error);
+      // Continue execution even if file deletion fails
+    }
+  }
+}
 
 /**
  * @swagger
@@ -117,32 +150,12 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       });
     }
 
-    // Process related content images
-    const relatedContentWithImages = relatedContent.map(item => ({
-      ...item,
-      coverImage: item.coverImage
-        ? `data:image/jpeg;base64,${item.coverImage.toString('base64')}`
-        : null,
-    }));
-
-    // Convert coverImage and audioFile Buffers to base64 data URLs for client-side rendering
-    const contentWithMedia = {
+    const responseData = {
       ...contentItem,
-      coverImage: contentItem.coverImage
-        ? `data:image/jpeg;base64,${contentItem.coverImage.toString('base64')}`
-        : null,
-      audioFile: contentItem.audioFile
-        ? `data:audio/mpeg;base64,${contentItem.audioFile.toString('base64')}`
-        : null,
-      relatedContent: relatedContentWithImages,
+      relatedContent,
     };
 
-    // Process linked podcast image if it exists
-    if (contentWithMedia.linkedPodcast && contentWithMedia.linkedPodcast.coverImage) {
-      (contentWithMedia.linkedPodcast.coverImage as any) = `data:image/jpeg;base64,${(contentWithMedia.linkedPodcast.coverImage as Buffer).toString('base64')}`;
-    }
-
-    return NextResponse.json(contentWithMedia);
+    return NextResponse.json(responseData);
   } catch (error) {
     console.error(`Failed to fetch content ${params.id}:`, error);
     return NextResponse.json({ message: 'An internal server error occurred' }, { status: 500 });
@@ -197,8 +210,37 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     return NextResponse.json({ message: 'Content not found or you do not have permission to edit it' }, { status: 404 });
   }
 
-  const body = await req.json();
-  const validation = updateContentSchema.safeParse(body);
+  let rawData: any = {};
+  let coverImageFile: File | null = null;
+  let audioFile: File | null = null;
+
+  const contentType = req.headers.get('content-type') || '';
+
+  if (contentType.includes('multipart/form-data')) {
+    const formData = await req.formData();
+    rawData = {
+      title: formData.get('title'),
+      description: formData.get('description'),
+      content: formData.get('content'),
+      type: formData.get('type') || undefined,
+      status: formData.get('status') || undefined,
+      isFree: formData.get('isFree') === 'true',
+      subscriptionTier: formData.get('subscriptionTier') || null,
+      duration: formData.get('duration') || undefined,
+      readingTime: formData.get('readingTime') || undefined,
+      seriesId: formData.get('seriesId') === 'null' ? null : formData.get('seriesId'),
+      chapterNumber: formData.get('chapterNumber') ? Number(formData.get('chapterNumber')) : null,
+      galleryId: formData.get('galleryId') === 'null' ? null : formData.get('galleryId'),
+      linkedPodcastId: formData.get('linkedPodcastId') === 'null' ? null : formData.get('linkedPodcastId'),
+      tags: formData.getAll('tags').map(t => t.toString()),
+    };
+    coverImageFile = formData.get('coverImage') as File | null;
+    audioFile = formData.get('audioFile') as File | null;
+  } else {
+    rawData = await req.json();
+  }
+
+  const validation = updateContentSchema.safeParse(rawData);
 
   if (!validation.success) {
     return NextResponse.json({ errors: validation.error.flatten().fieldErrors }, { status: 400 });
@@ -233,18 +275,17 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       })),
     } : undefined;
 
-    // Convert base64 cover image to buffer if it exists
-    let coverImageBuffer: Buffer | undefined = undefined;
-    if (updateData.coverImage && updateData.coverImage.startsWith('data:image')) {
-        const base64Data = updateData.coverImage.replace(/^data:image\/\w+;base64,/, '');
-        coverImageBuffer = Buffer.from(base64Data, 'base64');
+    // Handle file uploads
+    let coverImageUrl: string | undefined = updateData.coverImage;
+    if (coverImageFile) {
+      const savedUrl = await saveFileToDisk(coverImageFile, 'images');
+      if (savedUrl) coverImageUrl = savedUrl;
     }
 
-    // Convert base64 audio file to buffer if it exists
-    let audioFileBuffer: Buffer | undefined = undefined;
-    if (updateData.audioFile && updateData.audioFile.startsWith('data:audio')) {
-        const base64Data = updateData.audioFile.replace(/^data:audio\/\w+;base64,/, '');
-        audioFileBuffer = Buffer.from(base64Data, 'base64');
+    let audioFileUrl: string | undefined = updateData.audioFile;
+    if (audioFile) {
+      const savedUrl = await saveFileToDisk(audioFile, 'podcasts');
+      if (savedUrl) audioFileUrl = savedUrl;
     }
 
     const updatedContent = await prisma.content.update({
@@ -252,8 +293,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       data: {
         ...updateData,
         ...statusReset,
-        ...(coverImageBuffer && { coverImage: coverImageBuffer }),
-        ...(audioFileBuffer && { audioFile: audioFileBuffer }),
+        ...(coverImageUrl !== undefined && { coverImage: coverImageUrl }),
+        ...(audioFileUrl !== undefined && { audioFile: audioFileUrl }),
         seriesId,
         chapterNumber,
         linkedPodcastId,
@@ -267,17 +308,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       },
     });
 
-    // Convert coverImage and audioFile Buffers back to base64 for the response
-    const responseWithMedia = {
-      ...updatedContent,
-      coverImage: updatedContent.coverImage
-        ? `data:image/jpeg;base64,${updatedContent.coverImage.toString('base64')}`
-        : null,
-      audioFile: updatedContent.audioFile
-        ? `data:audio/mpeg;base64,${updatedContent.audioFile.toString('base64')}`
-        : null,
-    };
-    return NextResponse.json(responseWithMedia);
+    return NextResponse.json(updatedContent);
   } catch (error) {
     console.error(`Failed to update content ${params.id}:`, error);
     return NextResponse.json({ message: 'An internal server error occurred' }, { status: 500 });
@@ -325,13 +356,13 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   }
 
   try {
-    // Soft delete by updating the status to ARCHIVED
-    await prisma.content.update({
+    // Delete associated media files
+    await deleteFileFromDisk(contentItem.coverImage);
+    await deleteFileFromDisk(contentItem.audioFile);
+
+    // Hard delete from database
+    await prisma.content.delete({
       where: { id: params.id },
-      data: {
-        status: ContentStatus.ARCHIVED,
-        publishedAt: null, // Unpublish if it was published
-      },
     });
     return new NextResponse(null, { status: 204 });
   } catch (error) {

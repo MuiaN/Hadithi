@@ -10,6 +10,21 @@ import {
   BarChart3,
   Users
 } from 'lucide-react';
+import { 
+  BarChart, 
+  Bar, 
+  LineChart, 
+  Line, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend, 
+  ResponsiveContainer, 
+  PieChart, 
+  Pie, 
+  Cell 
+} from 'recharts';
 import Image from 'next/image';
 import useStore from '@/lib/store/useStore';
 
@@ -20,7 +35,9 @@ interface AnalyticsData {
   totalComments: number;
   contentCount: number;
   topContent: ContentItem[];
-  viewsOverTime: { date: string; views: number }[];
+  statusBreakdown: { status: string; count: number }[];
+  typeBreakdown: { type: string; count: number }[];
+  history: { date: string; likes: number; comments: number; content: number }[];
 }
 
 interface ContentItem {
@@ -44,7 +61,9 @@ export default function CreatorAnalyticsPage() {
     totalComments: 0,
     contentCount: 0,
     topContent: [],
-    viewsOverTime: []
+    statusBreakdown: [],
+    typeBreakdown: [],
+    history: []
   });
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState('30d');
@@ -74,6 +93,23 @@ export default function CreatorAnalyticsPage() {
       return (num / 1000).toFixed(1) + 'k';
     }
     return num.toString();
+  };
+
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
+  const STATUS_COLORS: Record<string, string> = {
+    PUBLISHED: '#22c55e', // Green
+    DRAFT: '#eab308',     // Yellow
+    PENDING_APPROVAL: '#3b82f6', // Blue
+    REJECTED: '#ef4444',  // Red
+    ARCHIVED: '#6b7280'   // Gray
+  };
+
+  const formatStatus = (status: string) => {
+    return status.replace('_', ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase());
+  };
+
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
 
   if (loading) {
@@ -194,28 +230,109 @@ export default function CreatorAnalyticsPage() {
       </div>
 
       {/* Charts and Top Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Views Over Time */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+        {/* Engagement History */}
+        <div className="p-6 rounded-lg col-span-1 lg:col-span-2" style={{ backgroundColor: 'var(--color-card)', border: '1px solid var(--color-border)' }}>
+          <h2 className="text-xl font-semibold mb-4" style={{ color: 'var(--color-textPrimary)' }}>
+            Engagement Over Time
+          </h2>
+          <div className="h-80 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={analytics.history} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
+                <XAxis 
+                  dataKey="date" 
+                  tickFormatter={formatDate}
+                  stroke="var(--color-textSecondary)" 
+                  fontSize={12} 
+                  tickLine={false} 
+                  axisLine={false} 
+                />
+                <YAxis 
+                  stroke="var(--color-textSecondary)" 
+                  fontSize={12} 
+                  tickLine={false} 
+                  axisLine={false} 
+                  allowDecimals={false}
+                />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: 'var(--color-card)', borderColor: 'var(--color-border)', borderRadius: '8px' }}
+                  itemStyle={{ color: 'var(--color-textPrimary)' }}
+                  labelFormatter={formatDate}
+                />
+                <Legend />
+                <Line type="monotone" dataKey="likes" name="Likes" stroke="#ef4444" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
+                <Line type="monotone" dataKey="comments" name="Comments" stroke="#22c55e" strokeWidth={2} dot={false} activeDot={{ r: 6 }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Content Status Distribution */}
         <div className="p-6 rounded-lg" style={{ backgroundColor: 'var(--color-card)', border: '1px solid var(--color-border)' }}>
           <h2 className="text-xl font-semibold mb-4" style={{ color: 'var(--color-textPrimary)' }}>
-            Views Over Time
+            Content Status
           </h2>
-          <div className="h-64 flex items-end justify-between space-x-2">
-            {analytics.viewsOverTime.map((data, index) => (
-              <div key={data.date} className="flex flex-col items-center flex-1">
-                <div
-                  className="w-full rounded-t"
-                  style={{
-                    height: `${(data.views / 700) * 200}px`,
-                    backgroundColor: 'var(--color-primary)',
-                    minHeight: '20px'
-                  }}
-                ></div>
-                <span className="text-xs mt-2" style={{ color: 'var(--color-textSecondary)' }}>
-                  {new Date(data.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                </span>
-              </div>
-            ))}
+          <div className="h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={analytics.statusBreakdown}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={60}
+                  outerRadius={80}
+                  paddingAngle={5}
+                  dataKey="count"
+                  nameKey="status"
+                >
+                  {analytics.statusBreakdown.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={STATUS_COLORS[entry.status] || COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  contentStyle={{ backgroundColor: 'var(--color-card)', borderColor: 'var(--color-border)', borderRadius: '8px' }}
+                  itemStyle={{ color: 'var(--color-textPrimary)' }}
+                  formatter={(value: number, name: string) => [value, formatStatus(name)]}
+                />
+                <Legend formatter={(value) => formatStatus(value)} />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Content Creation History */}
+        <div className="p-6 rounded-lg" style={{ backgroundColor: 'var(--color-card)', border: '1px solid var(--color-border)' }}>
+          <h2 className="text-xl font-semibold mb-4" style={{ color: 'var(--color-textPrimary)' }}>
+            Content Created
+          </h2>
+          <div className="h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={analytics.history}>
+                <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" vertical={false} />
+                <XAxis 
+                  dataKey="date" 
+                  tickFormatter={formatDate}
+                  stroke="var(--color-textSecondary)" 
+                  fontSize={12} 
+                  tickLine={false} 
+                  axisLine={false} 
+                />
+                <YAxis 
+                  stroke="var(--color-textSecondary)" 
+                  fontSize={12} 
+                  tickLine={false} 
+                  axisLine={false} 
+                  allowDecimals={false}
+                />
+                <Tooltip 
+                  contentStyle={{ backgroundColor: 'var(--color-card)', borderColor: 'var(--color-border)', borderRadius: '8px' }}
+                  itemStyle={{ color: 'var(--color-textPrimary)' }}
+                  labelFormatter={formatDate}
+                />
+                <Bar dataKey="content" name="New Content" fill="var(--color-primary)" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </div>
 

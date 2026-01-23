@@ -51,16 +51,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       data: { views: { increment: 1 } },
     });
 
-    const contentWithMedia = {
-      ...contentItem,
-      coverImage: contentItem.coverImage
-        ? `data:image/jpeg;base64,${contentItem.coverImage.toString('base64')}`
-        : null,
-      audioFile: contentItem.audioFile
-        ? `data:audio/mpeg;base64,${contentItem.audioFile.toString('base64')}`
-        : null,
-    };
-    return NextResponse.json(contentWithMedia);
+    return NextResponse.json(contentItem);
   } catch (error) {
     console.error(`Failed to fetch content ${params.id}:`, error);
     return NextResponse.json({ message: 'An internal server error occurred' }, { status: 500 });

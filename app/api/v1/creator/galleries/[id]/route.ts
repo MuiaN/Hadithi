@@ -2,23 +2,48 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getAuth } from '@/lib/auth';
 import { z } from 'zod';
-import { SubscriptionTier } from '@prisma/client';
+import { SubscriptionTier, ContentStatus } from '@prisma/client';
+import { writeFile, mkdir, unlink, rmdir } from 'fs/promises';
+import path from 'path';
 
-const galleryImageSchema = z.object({
-  url: z.string().url(),
-  caption: z.string(),
-  alt: z.string(),
-});
+// Helper to save gallery image
+async function saveGalleryImage(file: File, galleryTitle: string): Promise<string | null> {
+  if (!file) return null;
 
-const updateGallerySchema = z.object({
-  title: z.string().min(1, 'Title is required').optional(),
-  description: z.string().optional().or(z.literal('')),
-  images: z.array(galleryImageSchema).min(1, 'At least one image is required').optional(),
-  tags: z.array(z.string()).optional(),
-  isPublished: z.boolean().optional(),
-  isFree: z.boolean().optional(),
-  subscriptionTier: z.nativeEnum(SubscriptionTier).nullable().optional(),
-});
+  const arrayBuffer = await file.arrayBuffer();
+  const uint8Array = new Uint8Array(arrayBuffer);
+  
+  // Sanitize gallery title for folder name
+  const sanitizedTitle = galleryTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+  const filename = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+  
+  // Define the path: public/media/galleries/[gallery name]
+  const uploadDir = path.join(process.cwd(), 'public', 'media', 'galleries', sanitizedTitle);
+  
+  // Ensure directory exists
+  await mkdir(uploadDir, { recursive: true });
+  
+  // Write file
+  await writeFile(path.join(uploadDir, filename), uint8Array);
+  
+  // Return the public URL
+  return `/media/galleries/${sanitizedTitle}/${filename}`;
+}
+
+// Helper to delete file from disk
+async function deleteFileFromDisk(fileUrl: string | null) {
+  if (!fileUrl) return;
+  
+  // Check if it's a local file (starts with /media/)
+  if (fileUrl.startsWith('/media/')) {
+    try {
+      const filePath = path.join(process.cwd(), 'public', fileUrl);
+      await unlink(filePath);
+    } catch (error) {
+      console.error(`Failed to delete file: ${fileUrl}`, error);
+    }
+  }
+}
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const user = await getAuth(req);
@@ -53,36 +78,79 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
   const gallery = await prisma.gallery.findUnique({
     where: { id: params.id },
+    include: { images: true },
   });
 
   if (!gallery || gallery.authorId !== user.id) {
     return NextResponse.json({ message: 'Gallery not found or you do not have permission to edit it' }, { status: 404 });
   }
 
-  const body = await req.json();
-  const validation = updateGallerySchema.safeParse(body);
-
-  if (!validation.success) {
-    return NextResponse.json({ errors: validation.error.flatten().fieldErrors }, { status: 400 });
+  let formData;
+  try {
+    formData = await req.formData();
+  } catch (e) {
+    return NextResponse.json({ message: 'Invalid form data' }, { status: 400 });
   }
 
-  const { images, ...updateData } = validation.data;
+  const title = formData.get('title') as string;
+  const description = formData.get('description') as string;
+  const status = formData.get('status') as ContentStatus;
+  const isFree = formData.get('isFree') === 'true';
+  const subscriptionTier = formData.get('subscriptionTier') as SubscriptionTier | null;
+  const tags = formData.getAll('tags').map(t => t.toString());
+  
+  // Parse images metadata
+  const imagesMetadataJson = formData.get('imagesMetadata') as string;
+  const imagesMetadata = imagesMetadataJson ? JSON.parse(imagesMetadataJson) : [];
+  const newImageFiles = formData.getAll('newImages') as File[];
+
+  if (!title) {
+    return NextResponse.json({ message: 'Title is required' }, { status: 400 });
+  }
 
   try {
+    // Process images
+    const finalImages = [];
+    let newFileIndex = 0;
+
+    // 1. Identify images to keep and new images to save
+    for (const meta of imagesMetadata) {
+      if (meta.isNew) {
+        const file = newImageFiles[newFileIndex++];
+        if (file) {
+          const url = await saveGalleryImage(file, title);
+          if (url) {
+            finalImages.push({ url, caption: meta.caption, alt: meta.alt });
+          }
+        }
+      } else {
+        finalImages.push({ url: meta.url, caption: meta.caption, alt: meta.alt });
+      }
+    }
+
+    // 2. Identify deleted images to remove from disk
+    const existingImageUrls = new Set(gallery.images.map(img => img.url));
+    const finalImageUrls = new Set(finalImages.map(img => img.url));
+    
+    for (const existingUrl of Array.from(existingImageUrls)) {
+      if (!finalImageUrls.has(existingUrl)) {
+        await deleteFileFromDisk(existingUrl);
+      }
+    }
+
     const updatedGallery = await prisma.gallery.update({
       where: { id: params.id },
       data: {
-        ...updateData,
-        ...(images && {
-          images: {
-            deleteMany: {}, // Delete existing images
-            create: images.map(img => ({
-              url: img.url,
-              caption: img.caption,
-              alt: img.alt,
-            })),
-          },
-        }),
+        title,
+        description,
+        isFree,
+        subscriptionTier: isFree ? null : subscriptionTier,
+        tags,
+        ...(status && { status, isPublished: status === ContentStatus.PUBLISHED }),
+        images: {
+          deleteMany: {}, // Clear existing relations
+          create: finalImages, // Create new relations
+        },
       },
     });
     return NextResponse.json(updatedGallery);
@@ -100,6 +168,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
 
   const gallery = await prisma.gallery.findUnique({
     where: { id: params.id },
+    include: { images: true }
   });
 
   if (!gallery || gallery.authorId !== user.id) {
@@ -107,6 +176,29 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   }
 
   try {
+    // Delete all image files from disk
+    const dirsToCheck = new Set<string>();
+    for (const image of gallery.images) {
+      await deleteFileFromDisk(image.url);
+      if (image.url.startsWith('/media/galleries/')) {
+        const dirPath = path.dirname(path.join(process.cwd(), 'public', image.url));
+        dirsToCheck.add(dirPath);
+      }
+    }
+
+    // Also try to delete the folder for the current title
+    const sanitizedTitle = gallery.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    const currentDir = path.join(process.cwd(), 'public', 'media', 'galleries', sanitizedTitle);
+    dirsToCheck.add(currentDir);
+
+    for (const dir of Array.from(dirsToCheck)) {
+      try {
+        await rmdir(dir);
+      } catch (e) {
+        // Ignore if directory is not empty or doesn't exist
+      }
+    }
+
     // Use a transaction to delete images and then the gallery
     await prisma.$transaction([
       prisma.galleryImage.deleteMany({

@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Content" ALTER COLUMN "coverImage" SET DATA TYPE TEXT,
+ALTER COLUMN "audioFile" SET DATA TYPE TEXT;

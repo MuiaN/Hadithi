@@ -102,7 +102,7 @@ model Content {
   title        String
   description  String
   content      String    @db.Text
-  coverImage   Bytes?
+  coverImage   String?
   type         ContentType
   status       ContentStatus @default(DRAFT)
   isFree       Boolean   @default(false)
@@ -110,7 +110,7 @@ model Content {
   readingTime  String?   // e.g., "5 min read"
   rejectionReason String?  @db.Text // Reason for why content was archived/rejected
   duration     String?   // e.g., "45:32" for podcasts
-  audioFile    Bytes?    // for podcasts
+  audioFile    String?   // for podcasts
 
   publishedAt  DateTime?
   createdAt    DateTime  @default(now())
@@ -188,6 +188,7 @@ model Gallery {
   id           String    @id @default(cuid())
   title        String
   description  String
+  status       ContentStatus @default(DRAFT)
   isPublished  Boolean   @default(false)
   publishedAt  DateTime?
   isFree       Boolean   @default(true)

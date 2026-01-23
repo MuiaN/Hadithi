@@ -16,7 +16,10 @@ import {
   Search,
   Filter,
   Clock,
-  Heart
+  Heart,
+  LayoutGrid,
+  List,
+  BarChart2
 } from 'lucide-react';
 import useStore from '@/lib/store/useStore';
 import Image from 'next/image';
@@ -44,6 +47,7 @@ export default function CreatorDashboard() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('grid');
   
   const { user, isAuthenticated } = useStore();
   const router = useRouter();
@@ -67,7 +71,7 @@ export default function CreatorDashboard() {
   }, []);
 
   const handleDelete = async (contentId: string) => {
-    if (!confirm('Are you sure you want to archive this content?')) {
+    if (!confirm('Are you sure you want to delete this content?')) {
       return;
     }
 
@@ -77,15 +81,15 @@ export default function CreatorDashboard() {
       });
 
       if (!res.ok) {
-        throw new Error('Failed to archive content');
+        throw new Error('Failed to delete content');
       }
 
       // Update the state to reflect the change
-      setMyContent(prevContent => prevContent.map(item => item.id === contentId ? { ...item, status: 'ARCHIVED' } : item));
-      alert('Content archived successfully.');
+      setMyContent(prevContent => prevContent.filter(item => item.id !== contentId));
+      alert('Content deleted successfully.');
     } catch (error) {
-      console.error('Error archiving content:', error);
-      alert('Failed to archive content.');
+      console.error('Error deleting content:', error);
+      alert('Failed to delete content.');
     }
   };
 
@@ -121,8 +125,6 @@ export default function CreatorDashboard() {
         return <Clock size={16} className="text-blue-500" />; // Pending approval
       case 'DRAFT':
         return <AlertCircle size={16} className="text-yellow-500" />;
-      case 'ARCHIVED':
-        return <XCircle size={16} className="text-gray-500" />; // Archived
       case 'REJECTED':
         return <XCircle size={16} className="text-red-500" />;
       default:
@@ -138,12 +140,19 @@ export default function CreatorDashboard() {
         return 'Pending Approval'; // Pending approval
       case 'DRAFT':
         return 'Draft';
-      case 'ARCHIVED':
-        return 'Archived'; // Archived
       case 'REJECTED':
         return 'Rejected';
       default:
         return 'Unknown';
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'PUBLISHED': return 'text-green-600 bg-green-100';
+      case 'DRAFT': return 'text-yellow-600 bg-yellow-100';
+      case 'PENDING_APPROVAL': return 'text-blue-600 bg-blue-100';
+      default: return 'text-gray-600 bg-gray-100';
     }
   };
 
@@ -301,8 +310,21 @@ export default function CreatorDashboard() {
                   <option value="PENDING_APPROVAL">In Review</option>
                   <option value="DRAFT">Draft</option>
                   <option value="REJECTED">Rejected</option>
-                  <option value="ARCHIVED">Archived</option>
                 </select>
+              </div>
+              <div className="flex items-center bg-[var(--color-input)] rounded-lg border border-[var(--color-inputBorder)] p-1">
+                <button
+                  onClick={() => setViewMode('grid')}
+                  className={`p-2 rounded-md transition-colors ${viewMode === 'grid' ? 'bg-[var(--color-primary)] text-white' : 'text-[var(--color-textSecondary)] hover:bg-[var(--color-backgroundSecondary)]'}`}
+                >
+                  <LayoutGrid size={20} />
+                </button>
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`p-2 rounded-md transition-colors ${viewMode === 'list' ? 'bg-[var(--color-primary)] text-white' : 'text-[var(--color-textSecondary)] hover:bg-[var(--color-backgroundSecondary)]'}`}
+                >
+                  <List size={20} />
+                </button>
               </div>
             </div>
           </div>
@@ -327,7 +349,8 @@ export default function CreatorDashboard() {
               </button>
             </div>
           ) : (
-            <div className="space-y-4">
+            viewMode === 'list' ? (
+              <div className="space-y-4">
               {filteredContent.map((item) => (
                 <div 
                   key={item.id}
@@ -396,6 +419,13 @@ export default function CreatorDashboard() {
                       title="Edit"
                     >
                       <Edit size={16} />
+                      </Link>
+                      <Link
+                        href={`/creator/analytics/${item.id}`}
+                        className="p-2 rounded-lg transition-colors text-purple-500 hover:bg-purple-500/10"
+                        title="Analytics"
+                      >
+                        <BarChart2 size={16} />
                     </Link>
                     <button
                       onClick={() => handleDelete(item.id)}
@@ -407,7 +437,90 @@ export default function CreatorDashboard() {
                   </div>
                 </div>
               ))}
-            </div>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredContent.map((item) => (
+                  <div
+                    key={item.id}
+                    className="card overflow-hidden"
+                    style={{ backgroundColor: 'var(--color-card)' }}
+                  >
+                    <div className="relative h-48 w-full">
+                      <Image
+                        src={item.coverImage || '/images/placeholder.png'}
+                        alt={item.title}
+                        className="w-full h-full object-cover"
+                        layout="fill"
+                      />
+                      <div className="absolute top-4 left-4 flex flex-col gap-2 items-start">
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(item.status)}`}>
+                          {getStatusText(item.status)}
+                        </span>
+                        <span className="px-2 py-1 text-xs font-medium rounded-full bg-black/60 text-white backdrop-blur-md capitalize">
+                          {item.type.toLowerCase()}
+                        </span>
+                      </div>
+                      <div className="absolute top-2 right-2">
+                        <button
+                          onClick={() => handleDelete(item.id)}
+                          className="p-2 rounded-full bg-white/20 text-white backdrop-blur-sm hover:bg-red-500/50 transition-colors"
+                          title="Archive"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="p-6">
+                      <h3 className="text-lg font-semibold mb-2 line-clamp-2" style={{ color: 'var(--color-textPrimary)' }}>
+                        {item.title}
+                      </h3>
+                      <p className="text-sm mb-4 line-clamp-3" style={{ color: 'var(--color-textSecondary)' }}>
+                        {item.description}
+                      </p>
+
+                      <div className="flex items-center justify-between text-sm mb-4" style={{ color: 'var(--color-textSecondary)' }}>
+                        <span>Created {formatDateTime(item.createdAt)}</span>
+                        <div className="flex items-center space-x-4">
+                          <span className="flex items-center space-x-1">
+                            <Eye size={12} />
+                            <span>{item.views}</span>
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center space-x-2">
+                        <Link
+                          href={item.type === 'PODCAST' ? `/creator/podcast/${item.id}` : `/creator/content/${item.id}`}
+                          className="flex-1 flex items-center justify-center space-x-1 py-2 px-3 rounded-lg text-sm transition-colors"
+                          style={{ backgroundColor: 'var(--color-backgroundSecondary)', color: 'var(--color-textPrimary)' }}
+                        >
+                          <Eye size={14} />
+                          <span>View</span>
+                        </Link>
+                        <Link
+                          href={item.type === 'PODCAST' ? `/creator/podcast/edit/${item.id}` : `/creator/edit/${item.id}`}
+                          className="flex-1 flex items-center justify-center space-x-1 py-2 px-3 rounded-lg text-sm transition-colors"
+                          style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}
+                        >
+                          <Edit size={14} />
+                          <span>Edit</span>
+                        </Link>
+                        <Link
+                          href={`/creator/analytics/${item.id}`}
+                          className="flex-1 flex items-center justify-center space-x-1 py-2 px-3 rounded-lg text-sm transition-colors"
+                          style={{ backgroundColor: 'var(--color-backgroundSecondary)', color: 'var(--color-textPrimary)' }}
+                        >
+                          <BarChart2 size={14} />
+                          <span>Stats</span>
+                        </Link>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )
           )}
         </div>
       </div>
