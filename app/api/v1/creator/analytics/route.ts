@@ -118,19 +118,12 @@ export async function GET(req: NextRequest) {
 
   const history = Array.from(historyMap.values()).sort((a, b) => a.date.localeCompare(b.date));
 
-  const topContentWithImages = topContent.map(item => ({
-    ...item,
-    coverImage: item.coverImage
-      ? `data:image/jpeg;base64,${item.coverImage.toString('base64')}`
-      : null,
-  }));
-
   const analyticsData = {
     totalViews: stats._sum.views || 0,
     totalLikes,
     totalComments,
     contentCount: stats._count._all,
-    topContent: topContentWithImages,
+    topContent,
     statusBreakdown: statusCounts.map(s => ({ status: s.status, count: s._count._all })),
     typeBreakdown: typeCounts.map(t => ({ type: t.type, count: t._count._all })),
     history,
