@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { 
   Save, 
-  Eye, 
   Upload, 
   FileText, 
   BookOpen, 
@@ -631,16 +630,6 @@ export default function NewContentPage() {
             </button>
 
             <div className="flex items-center space-x-4">
-              <button
-                type="button"
-                onClick={() => setPreview(!preview)}
-                className="flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-colors"
-                style={{ backgroundColor: 'var(--color-backgroundSecondary)', color: 'var(--color-textPrimary)' }}
-              >
-                <Eye size={16} />
-                <span>{preview ? 'Edit' : 'Preview'}</span>
-              </button>
-
               <button
                 type="button"
                 onClick={(e) => handleSubmit(e, 'DRAFT')}
