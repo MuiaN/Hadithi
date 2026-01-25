@@ -5,6 +5,7 @@ import { z, ZodError } from 'zod'; // Ensure ZodError is imported
 import { ContentType, ContentStatus, SubscriptionTier, Prisma } from '@prisma/client'; // Import Prisma
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
+import { put } from '@vercel/blob';
 
 const createContentSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -98,9 +99,17 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// Helper to save file to disk
-async function saveFileToDisk(file: File, subfolder: string): Promise<string | null> {
+// Helper to save file (supports Vercel Blob and local disk)
+async function saveFile(file: File, subfolder: string): Promise<string | null> {
   if (!file) return null;
+
+  if (process.env.BLOB_READ_WRITE_TOKEN) {
+    const filename = `${subfolder}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+    const blob = await put(filename, file, {
+      access: 'public',
+    });
+    return blob.url;
+  }
 
   const arrayBuffer = await file.arrayBuffer();
   const uint8Array = new Uint8Array(arrayBuffer);
@@ -190,8 +199,8 @@ export async function POST(req: NextRequest) {
   }
 
   // Save files to disk
-  const coverImageUrl = coverImageFile ? await saveFileToDisk(coverImageFile, 'images') : null;
-  const audioFileUrl = audioFile ? await saveFileToDisk(audioFile, 'podcasts') : null;
+  const coverImageUrl = coverImageFile ? await saveFile(coverImageFile, 'images') : null;
+  const audioFileUrl = audioFile ? await saveFile(audioFile, 'podcasts') : null;
 
   try {
     // Construct the data object for Prisma explicitly

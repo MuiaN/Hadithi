@@ -5,17 +5,24 @@ import { z } from 'zod';
 import { SubscriptionTier, ContentStatus } from '@prisma/client';
 import { writeFile, mkdir, unlink, rmdir } from 'fs/promises';
 import path from 'path';
+import { put, del } from '@vercel/blob';
 
 // Helper to save gallery image
 async function saveGalleryImage(file: File, galleryTitle: string): Promise<string | null> {
   if (!file) return null;
 
-  const arrayBuffer = await file.arrayBuffer();
-  const uint8Array = new Uint8Array(arrayBuffer);
-  
   // Sanitize gallery title for folder name
   const sanitizedTitle = galleryTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase();
   const filename = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+
+  if (process.env.BLOB_READ_WRITE_TOKEN) {
+    const blobPath = `galleries/${sanitizedTitle}/${filename}`;
+    const blob = await put(blobPath, file, { access: 'public' });
+    return blob.url;
+  }
+
+  const arrayBuffer = await file.arrayBuffer();
+  const uint8Array = new Uint8Array(arrayBuffer);
   
   // Define the path: public/media/galleries/[gallery name]
   const uploadDir = path.join(process.cwd(), 'public', 'media', 'galleries', sanitizedTitle);
@@ -30,10 +37,19 @@ async function saveGalleryImage(file: File, galleryTitle: string): Promise<strin
   return `/media/galleries/${sanitizedTitle}/${filename}`;
 }
 
-// Helper to delete file from disk
-async function deleteFileFromDisk(fileUrl: string | null) {
+// Helper to delete file
+async function deleteFile(fileUrl: string | null) {
   if (!fileUrl) return;
   
+  if (process.env.BLOB_READ_WRITE_TOKEN && fileUrl.startsWith('http')) {
+    try {
+      await del(fileUrl);
+    } catch (error) {
+      console.error(`Failed to delete blob: ${fileUrl}`, error);
+    }
+    return;
+  }
+
   // Check if it's a local file (starts with /media/)
   if (fileUrl.startsWith('/media/')) {
     try {
@@ -134,7 +150,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     
     for (const existingUrl of Array.from(existingImageUrls)) {
       if (!finalImageUrls.has(existingUrl)) {
-        await deleteFileFromDisk(existingUrl);
+        await deleteFile(existingUrl);
       }
     }
 
@@ -179,7 +195,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     // Delete all image files from disk
     const dirsToCheck = new Set<string>();
     for (const image of gallery.images) {
-      await deleteFileFromDisk(image.url);
+      await deleteFile(image.url);
       if (image.url.startsWith('/media/galleries/')) {
         const dirPath = path.dirname(path.join(process.cwd(), 'public', image.url));
         dirsToCheck.add(dirPath);

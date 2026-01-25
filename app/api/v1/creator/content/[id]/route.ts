@@ -5,6 +5,7 @@ import { z } from 'zod';
 import { ContentType, ContentStatus, SubscriptionTier } from '@prisma/client';
 import { writeFile, mkdir, unlink } from 'fs/promises';
 import path from 'path';
+import { put, del } from '@vercel/blob';
 
 const updateContentSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -34,9 +35,17 @@ type RelatedContent = {
   coverImage: string | null;
 };
 
-// Helper to save file to disk
-async function saveFileToDisk(file: File, subfolder: string): Promise<string | null> {
+// Helper to save file
+async function saveFile(file: File, subfolder: string): Promise<string | null> {
   if (!file) return null;
+
+  if (process.env.BLOB_READ_WRITE_TOKEN) {
+    const filename = `${subfolder}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+    const blob = await put(filename, file, {
+      access: 'public',
+    });
+    return blob.url;
+  }
 
   const arrayBuffer = await file.arrayBuffer();
   const uint8Array = new Uint8Array(arrayBuffer);
@@ -49,10 +58,19 @@ async function saveFileToDisk(file: File, subfolder: string): Promise<string | n
   return `/media/${subfolder}/${filename}`;
 }
 
-// Helper to delete file from disk
-async function deleteFileFromDisk(fileUrl: string | null) {
+// Helper to delete file
+async function deleteFile(fileUrl: string | null) {
   if (!fileUrl) return;
   
+  if (process.env.BLOB_READ_WRITE_TOKEN && fileUrl.startsWith('http')) {
+    try {
+      await del(fileUrl);
+    } catch (error) {
+      console.error(`Failed to delete blob: ${fileUrl}`, error);
+    }
+    return;
+  }
+
   // Check if it's a local file (starts with /media/)
   if (fileUrl.startsWith('/media/')) {
     try {
@@ -278,13 +296,13 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     // Handle file uploads
     let coverImageUrl: string | undefined = updateData.coverImage;
     if (coverImageFile) {
-      const savedUrl = await saveFileToDisk(coverImageFile, 'images');
+      const savedUrl = await saveFile(coverImageFile, 'images');
       if (savedUrl) coverImageUrl = savedUrl;
     }
 
     let audioFileUrl: string | undefined = updateData.audioFile;
     if (audioFile) {
-      const savedUrl = await saveFileToDisk(audioFile, 'podcasts');
+      const savedUrl = await saveFile(audioFile, 'podcasts');
       if (savedUrl) audioFileUrl = savedUrl;
     }
 
@@ -357,8 +375,8 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
 
   try {
     // Delete associated media files
-    await deleteFileFromDisk(contentItem.coverImage);
-    await deleteFileFromDisk(contentItem.audioFile);
+    await deleteFile(contentItem.coverImage);
+    await deleteFile(contentItem.audioFile);
 
     // Hard delete from database
     await prisma.content.delete({

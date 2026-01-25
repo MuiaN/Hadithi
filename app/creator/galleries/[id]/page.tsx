@@ -178,11 +178,7 @@ export default function GalleryViewPage({ params }: { params: { id: string } }) 
              <button onClick={() => router.back()} className="flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors" style={{ backgroundColor: 'var(--color-card)', color: 'var(--color-textPrimary)', border: '1px solid var(--color-border)' }}>
               <ArrowLeft size={16} />
               <span>Back</span>
-            </button>
-            <Link href={`/creator/galleries?edit=${gallery.id}`} className="flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium" style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}>
-              <Edit size={16} />
-              <span>Edit Gallery</span>
-            </Link>
+            </button>            
           </div>
           
           {gallery.description && (

@@ -4,6 +4,7 @@ import { getAuth } from '@/lib/auth';
 import { SubscriptionTier, ContentStatus } from '@prisma/client';
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
+import { put } from '@vercel/blob';
 
 /**
  * @swagger
@@ -135,12 +136,18 @@ export async function POST(req: NextRequest) {
 async function saveGalleryImage(file: File, galleryTitle: string): Promise<string | null> {
   if (!file) return null;
 
-  const arrayBuffer = await file.arrayBuffer();
-  const uint8Array = new Uint8Array(arrayBuffer);
-  
   // Sanitize gallery title for folder name
   const sanitizedTitle = galleryTitle.replace(/[^a-z0-9]/gi, '_').toLowerCase();
   const filename = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+
+  if (process.env.BLOB_READ_WRITE_TOKEN) {
+    const blobPath = `galleries/${sanitizedTitle}/${filename}`;
+    const blob = await put(blobPath, file, { access: 'public' });
+    return blob.url;
+  }
+
+  const arrayBuffer = await file.arrayBuffer();
+  const uint8Array = new Uint8Array(arrayBuffer);
   
   // Define the path: public/media/galleries/[gallery name]
   const uploadDir = path.join(process.cwd(), 'public', 'media', 'galleries', sanitizedTitle);
