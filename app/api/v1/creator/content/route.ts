@@ -191,16 +191,27 @@ export async function POST(req: NextRequest) {
   // Extract all validated data
   const validatedData = validation.data;
   
-  const coverImageFile = formData.get('coverImage') as File | null;
-  const audioFile = formData.get('audioFile') as File | null;
+  const coverImageEntry = formData.get('coverImage');
+  const audioFileEntry = formData.get('audioFile');
 
   if (validatedData.seriesId && (validatedData.chapterNumber === null || validatedData.chapterNumber === undefined)) {
     return NextResponse.json({ message: 'Chapter number is required when content is part of a series' }, { status: 400 });
   }
 
   // Save files to disk
-  const coverImageUrl = coverImageFile ? await saveFile(coverImageFile, 'images') : null;
-  const audioFileUrl = audioFile ? await saveFile(audioFile, 'podcasts') : null;
+  let coverImageUrl: string | null = null;
+  if (coverImageEntry instanceof File) {
+    coverImageUrl = await saveFile(coverImageEntry, 'images');
+  } else if (typeof coverImageEntry === 'string') {
+    coverImageUrl = coverImageEntry;
+  }
+
+  let audioFileUrl: string | null = null;
+  if (audioFileEntry instanceof File) {
+    audioFileUrl = await saveFile(audioFileEntry, 'podcasts');
+  } else if (typeof audioFileEntry === 'string') {
+    audioFileUrl = audioFileEntry;
+  }
 
   try {
     // Construct the data object for Prisma explicitly

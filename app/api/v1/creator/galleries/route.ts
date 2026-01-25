@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
   const subscriptionTier = formData.get('subscriptionTier') as SubscriptionTier | null;
   const tags = formData.getAll('tags').map(t => t.toString());
   
-  const images = formData.getAll('images') as File[];
+  const images = formData.getAll('images');
   const captions = formData.getAll('captions') as string[];
   const alts = formData.getAll('alts') as string[];
 
@@ -94,11 +94,17 @@ export async function POST(req: NextRequest) {
   try {
     const savedImagesData = [];
     for (let i = 0; i < images.length; i++) {
-      const file = images[i];
+      const imageEntry = images[i];
       const caption = captions[i] || '';
       const alt = alts[i] || '';
       
-      const url = await saveGalleryImage(file, title);
+      let url: string | null = null;
+      if (imageEntry instanceof File) {
+        url = await saveGalleryImage(imageEntry, title);
+      } else if (typeof imageEntry === 'string') {
+        url = imageEntry;
+      }
+
       if (url) {
         savedImagesData.push({ url, caption, alt });
       }

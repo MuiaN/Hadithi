@@ -229,8 +229,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   }
 
   let rawData: any = {};
-  let coverImageFile: File | null = null;
-  let audioFile: File | null = null;
+  let coverImageEntry: FormDataEntryValue | null = null;
+  let audioFileEntry: FormDataEntryValue | null = null;
 
   const contentType = req.headers.get('content-type') || '';
 
@@ -252,8 +252,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       linkedPodcastId: formData.get('linkedPodcastId') === 'null' ? null : formData.get('linkedPodcastId'),
       tags: formData.getAll('tags').map(t => t.toString()),
     };
-    coverImageFile = formData.get('coverImage') as File | null;
-    audioFile = formData.get('audioFile') as File | null;
+    coverImageEntry = formData.get('coverImage');
+    audioFileEntry = formData.get('audioFile');
   } else {
     rawData = await req.json();
   }
@@ -295,15 +295,19 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
 
     // Handle file uploads
     let coverImageUrl: string | undefined = updateData.coverImage;
-    if (coverImageFile) {
-      const savedUrl = await saveFile(coverImageFile, 'images');
+    if (coverImageEntry instanceof File) {
+      const savedUrl = await saveFile(coverImageEntry, 'images');
       if (savedUrl) coverImageUrl = savedUrl;
+    } else if (typeof coverImageEntry === 'string') {
+      coverImageUrl = coverImageEntry;
     }
 
     let audioFileUrl: string | undefined = updateData.audioFile;
-    if (audioFile) {
-      const savedUrl = await saveFile(audioFile, 'podcasts');
+    if (audioFileEntry instanceof File) {
+      const savedUrl = await saveFile(audioFileEntry, 'podcasts');
       if (savedUrl) audioFileUrl = savedUrl;
+    } else if (typeof audioFileEntry === 'string') {
+      audioFileUrl = audioFileEntry;
     }
 
     const updatedContent = await prisma.content.update({

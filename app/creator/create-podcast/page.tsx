@@ -15,6 +15,7 @@ import {
 import Image from 'next/image';
 import useStore from '@/lib/store/useStore';
 import dynamic from 'next/dynamic';
+import { upload } from '@vercel/blob/client';
 
 const RichTextEditor = dynamic(() => import('@/components/ui/RichTextEditor'), { ssr: false });
 
@@ -83,12 +84,21 @@ export default function CreatePodcastPage() {
     
     formData.tags.forEach(tag => data.append('tags', tag));
 
+    // Upload files client-side if they exist
     if (coverImageFile) {
-      data.append('coverImage', coverImageFile);
+      const blob = await upload(coverImageFile.name, coverImageFile, {
+        access: 'public',
+        handleUploadUrl: '/api/v1/creator/upload',
+      });
+      data.append('coverImage', blob.url);
     }
 
     if (audioFile) {
-      data.append('audioFile', audioFile);
+      const blob = await upload(audioFile.name, audioFile, {
+        access: 'public',
+        handleUploadUrl: '/api/v1/creator/upload',
+      });
+      data.append('audioFile', blob.url);
     } else if (status === 'PENDING_APPROVAL') {
         alert('An audio file is required to submit a podcast for review.');
         setSaving(false);

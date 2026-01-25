@@ -19,6 +19,7 @@ import {
 import useStore from '@/lib/store/useStore';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
+import { upload } from '@vercel/blob/client';
 
 // Dynamically import a rich text editor to avoid SSR issues
 const RichTextEditor = dynamic(() => import('@/components/ui/RichTextEditor'), { ssr: false });
@@ -83,7 +84,11 @@ export default function NewContentPage() {
     formData.tags.forEach(tag => data.append('tags', tag));
 
     if (coverImageFile) {
-      data.append('coverImage', coverImageFile);
+      const blob = await upload(coverImageFile.name, coverImageFile, {
+        access: 'public',
+        handleUploadUrl: '/api/v1/creator/upload',
+      });
+      data.append('coverImage', blob.url);
     }
 
     try {

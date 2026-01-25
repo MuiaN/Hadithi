@@ -118,7 +118,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   // Parse images metadata
   const imagesMetadataJson = formData.get('imagesMetadata') as string;
   const imagesMetadata = imagesMetadataJson ? JSON.parse(imagesMetadataJson) : [];
-  const newImageFiles = formData.getAll('newImages') as File[];
+  const newImageEntries = formData.getAll('newImages');
 
   if (!title) {
     return NextResponse.json({ message: 'Title is required' }, { status: 400 });
@@ -132,12 +132,17 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     // 1. Identify images to keep and new images to save
     for (const meta of imagesMetadata) {
       if (meta.isNew) {
-        const file = newImageFiles[newFileIndex++];
-        if (file) {
-          const url = await saveGalleryImage(file, title);
-          if (url) {
-            finalImages.push({ url, caption: meta.caption, alt: meta.alt });
-          }
+        const entry = newImageEntries[newFileIndex++];
+        let url: string | null = null;
+        
+        if (entry instanceof File) {
+          url = await saveGalleryImage(entry, title);
+        } else if (typeof entry === 'string') {
+          url = entry;
+        }
+
+        if (url) {
+          finalImages.push({ url, caption: meta.caption, alt: meta.alt });
         }
       } else {
         finalImages.push({ url: meta.url, caption: meta.caption, alt: meta.alt });

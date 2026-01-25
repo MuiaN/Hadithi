@@ -11,6 +11,7 @@ import { Plus, Trash2, Eye, Edit, ImageIcon, X, LayoutGrid, List, Search, Filter
 import { toast } from '@/components/ui/use-toast';
 import Link from 'next/link';
 import Image from 'next/image';
+import { upload } from '@vercel/blob/client';
 
 export interface GalleryImage {
   id: string;
@@ -111,6 +112,20 @@ export default function CreatorGalleriesPage() {
   const handleSubmit = async (e: React.FormEvent, status: 'DRAFT' | 'PENDING_APPROVAL' = 'DRAFT') => {
     e.preventDefault();
 
+    // Upload new images client-side
+    const uploadedImages = await Promise.all(formData.images.map(async (img) => {
+      if (img.file) {
+        const blob = await upload(img.file.name, img.file, {
+          access: 'public',
+          handleUploadUrl: '/api/v1/creator/upload',
+        });
+        return { ...img, url: blob.url, file: undefined }; // Remove file, keep URL
+      }
+      return img;
+    }));
+
+    // Update formData with uploaded images for the request
+    
     const galleryData = {
       title: formData.title,
       description: formData.description,
@@ -133,20 +148,13 @@ export default function CreatorGalleriesPage() {
         formData.tags.forEach(tag => data.append('tags', tag));
 
         // Prepare metadata for all images (both existing and new)
-        const imagesMetadata = formData.images.map(img => ({
+        const imagesMetadata = uploadedImages.map(img => ({
           url: img.url,
           caption: img.caption || '',
           alt: img.alt || '',
-          isNew: !!img.file // Flag to tell backend this is a new file
+          isNew: false // All images are now "existing" (uploaded) from backend perspective
         }));
         data.append('imagesMetadata', JSON.stringify(imagesMetadata));
-
-        // Append new files
-        formData.images.forEach(img => {
-          if (img.file) {
-            data.append('newImages', img.file);
-          }
-        });
 
         response = await fetch(`/api/v1/creator/galleries/${editingGallery.id}`, {
           method: 'PUT',
@@ -162,9 +170,9 @@ export default function CreatorGalleriesPage() {
         
         formData.tags.forEach(tag => data.append('tags', tag));
 
-        formData.images.forEach((img) => {
-          if (img.file) {
-            data.append('images', img.file);
+        uploadedImages.forEach((img) => {
+          if (img.url) {
+            data.append('images', img.url);
             data.append('captions', img.caption || '');
             data.append('alts', img.alt || '');
           }
