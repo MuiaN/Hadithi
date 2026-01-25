@@ -84,7 +84,8 @@ export default function NewContentPage() {
     formData.tags.forEach(tag => data.append('tags', tag));
 
     if (coverImageFile) {
-      const blob = await upload(coverImageFile.name, coverImageFile, {
+      const coverImageName = `media/images/${Date.now()}-${coverImageFile.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+      const blob = await upload(coverImageName, coverImageFile, {
         access: 'public',
         handleUploadUrl: '/api/v1/creator/upload',
       });

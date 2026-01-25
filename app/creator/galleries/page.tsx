@@ -43,6 +43,7 @@ export default function CreatorGalleriesPage() {
   const [galleries, setGalleries] = useState<Gallery[]>([]);
   const [filteredGalleries, setFilteredGalleries] = useState<Gallery[]>([]);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -111,32 +112,35 @@ export default function CreatorGalleriesPage() {
 
   const handleSubmit = async (e: React.FormEvent, status: 'DRAFT' | 'PENDING_APPROVAL' = 'DRAFT') => {
     e.preventDefault();
-
-    // Upload new images client-side
-    const uploadedImages = await Promise.all(formData.images.map(async (img) => {
-      if (img.file) {
-        const blob = await upload(img.file.name, img.file, {
-          access: 'public',
-          handleUploadUrl: '/api/v1/creator/upload',
-        });
-        return { ...img, url: blob.url, file: undefined }; // Remove file, keep URL
-      }
-      return img;
-    }));
-
-    // Update formData with uploaded images for the request
-    
-    const galleryData = {
-      title: formData.title,
-      description: formData.description,
-      images: formData.images,
-      tags: formData.tags,
-      status: status,
-      isFree: formData.isFree,
-      subscriptionTier: formData.isFree ? null : formData.subscriptionTier,
-    };
+    setSaving(true);
 
     try {
+      // Upload new images client-side
+      const uploadedImages = await Promise.all(formData.images.map(async (img) => {
+        if (img.file) {
+          const sanitizedTitle = formData.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+          const pathname = `media/galleries/${sanitizedTitle}/${Date.now()}-${img.file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+          const blob = await upload(pathname, img.file, {
+            access: 'public',
+            handleUploadUrl: '/api/v1/creator/upload',
+          });
+          return { ...img, url: blob.url, file: undefined }; // Remove file, keep URL
+        }
+        return img;
+      }));
+
+      // Update formData with uploaded images for the request
+      
+      const galleryData = {
+        title: formData.title,
+        description: formData.description,
+        images: formData.images,
+        tags: formData.tags,
+        status: status,
+        isFree: formData.isFree,
+        subscriptionTier: formData.isFree ? null : formData.subscriptionTier,
+      };
+
       let response;
       if (editingGallery) {
         const data = new FormData();
@@ -206,6 +210,8 @@ export default function CreatorGalleriesPage() {
         description: `Failed to ${editingGallery ? 'update' : 'create'} gallery`,
         variant: 'destructive',
       });
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -673,16 +679,16 @@ export default function CreatorGalleriesPage() {
                 </div>
 
                 <DialogFooter>
-                  <Button type="button" variant="outline" onClick={handleDialogClose}>
+                  <Button type="button" variant="outline" onClick={handleDialogClose} disabled={saving}>
                     Cancel
                   </Button>
-                  <Button type="button" onClick={(e) => handleSubmit(e, 'DRAFT')} style={{ backgroundColor: 'var(--color-secondary)', color: 'var(--color-textPrimary)' }}>
+                  <Button type="button" onClick={(e) => handleSubmit(e, 'DRAFT')} disabled={saving} style={{ backgroundColor: 'var(--color-secondary)', color: 'var(--color-textPrimary)' }}>
                     <Save className="mr-2 h-4 w-4" />
-                    Save Draft
+                    {saving ? 'Saving...' : 'Save Draft'}
                   </Button>
-                  <Button type="button" onClick={(e) => handleSubmit(e, 'PENDING_APPROVAL')} style={{ backgroundColor: 'var(--color-primary)' }}>
+                  <Button type="button" onClick={(e) => handleSubmit(e, 'PENDING_APPROVAL')} disabled={saving} style={{ backgroundColor: 'var(--color-primary)' }}>
                     <Send className="mr-2 h-4 w-4" />
-                    Submit for Review
+                    {saving ? 'Submitting...' : 'Submit for Review'}
                   </Button>
                 </DialogFooter>
               </form>

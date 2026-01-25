@@ -86,7 +86,8 @@ export default function CreatePodcastPage() {
 
     // Upload files client-side if they exist
     if (coverImageFile) {
-      const blob = await upload(coverImageFile.name, coverImageFile, {
+      const coverImageName = `media/images/${Date.now()}-${coverImageFile.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+      const blob = await upload(coverImageName, coverImageFile, {
         access: 'public',
         handleUploadUrl: '/api/v1/creator/upload',
       });
@@ -94,7 +95,8 @@ export default function CreatePodcastPage() {
     }
 
     if (audioFile) {
-      const blob = await upload(audioFile.name, audioFile, {
+      const audioFileName = `media/podcasts/${Date.now()}-${audioFile.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+      const blob = await upload(audioFileName, audioFile, {
         access: 'public',
         handleUploadUrl: '/api/v1/creator/upload',
       });

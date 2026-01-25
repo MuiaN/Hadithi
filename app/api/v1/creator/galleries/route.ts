@@ -147,7 +147,7 @@ async function saveGalleryImage(file: File, galleryTitle: string): Promise<strin
   const filename = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
 
   if (process.env.BLOB_READ_WRITE_TOKEN) {
-    const blobPath = `galleries/${sanitizedTitle}/${filename}`;
+    const blobPath = `media/galleries/${sanitizedTitle}/${filename}`;
     const blob = await put(blobPath, file, { access: 'public' });
     return blob.url;
   }

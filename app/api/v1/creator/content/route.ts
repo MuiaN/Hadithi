@@ -104,7 +104,7 @@ async function saveFile(file: File, subfolder: string): Promise<string | null> {
   if (!file) return null;
 
   if (process.env.BLOB_READ_WRITE_TOKEN) {
-    const filename = `${subfolder}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+    const filename = `media/${subfolder}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
     const blob = await put(filename, file, {
       access: 'public',
     });

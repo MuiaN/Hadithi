@@ -21,6 +21,7 @@ import {
 import useStore from '@/lib/store/useStore';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
+import { upload } from '@vercel/blob/client';
 
 const RichTextEditor = dynamic(() => import('@/components/ui/RichTextEditor'), { ssr: false });
 
@@ -147,7 +148,12 @@ export default function EditContentPage({ params }: { params: { id: string } }) 
     formData.tags.forEach(tag => data.append('tags', tag));
 
     if (coverImageFile) {
-      data.append('coverImage', coverImageFile);
+      const coverImageName = `media/images/${Date.now()}-${coverImageFile.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+      const blob = await upload(coverImageName, coverImageFile, {
+        access: 'public',
+        handleUploadUrl: '/api/v1/creator/upload',
+      });
+      data.append('coverImage', blob.url);
     }
 
     try {
