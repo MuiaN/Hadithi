@@ -48,6 +48,7 @@ export default function CreatorPodcastViewPage({ params }: { params: { id:string
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    window.scrollTo(0, 0);
     const fetchContent = async () => {
       try {
         const res = await fetch(`/api/v1/creator/content/${params.id}`);

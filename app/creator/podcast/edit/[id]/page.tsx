@@ -18,6 +18,8 @@ import useStore from '@/lib/store/useStore';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { upload } from '@vercel/blob/client';
+import { toast } from '@/components/ui/use-toast';
+import { Toaster } from '@/components/ui/toaster';
 
 const RichTextEditor = dynamic(() => import('@/components/ui/RichTextEditor'), { ssr: false });
 
@@ -57,6 +59,8 @@ export default function EditPodcastPage({ params }: { params: { id: string } }) 
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   const [coverImageFile, setCoverImageFile] = useState<File | null>(null);
   const [coverImagePreview, setCoverImagePreview] = useState<string | null>(null);
@@ -72,6 +76,7 @@ export default function EditPodcastPage({ params }: { params: { id: string } }) 
   const router = useRouter();
 
   useEffect(() => {
+    window.scrollTo(0, 0);
     const fetchData = async () => {
       setLoading(true);
       setError(null);
@@ -113,7 +118,7 @@ export default function EditPodcastPage({ params }: { params: { id: string } }) 
     e.preventDefault();
 
     if (formData.seriesId && (formData.chapterNumber === null || formData.chapterNumber === undefined)) {
-      alert('Chapter number is required when content is part of a series.');
+      toast({ title: 'Error', description: 'Chapter number is required when content is part of a series.', variant: 'destructive' });
       return;
     }
 
@@ -168,9 +173,12 @@ export default function EditPodcastPage({ params }: { params: { id: string } }) 
     }
   };
 
-  const handleDelete = async () => {
-    if (!confirm('Are you sure you want to archive this podcast?')) return;
-    setSaving(true);
+  const handleDeleteClick = () => {
+    setDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    setIsDeleting(true);
     try {
       const res = await fetch(`/api/v1/creator/content/${cleanId}`, { method: 'DELETE' });
       if (!res.ok) throw new Error('Failed to archive podcast');
@@ -178,7 +186,7 @@ export default function EditPodcastPage({ params }: { params: { id: string } }) 
     } catch (error) {
       console.error('Error archiving podcast:', error);
     } finally {
-      setSaving(false);
+      setIsDeleting(false);
     }
   };
 
@@ -192,7 +200,7 @@ export default function EditPodcastPage({ params }: { params: { id: string } }) 
 
   const handleCreateSeries = async () => {
     if (!newSeriesTitle.trim()) {
-      alert('Series title cannot be empty.');
+      toast({ title: 'Error', description: 'Series title cannot be empty.', variant: 'destructive' });
       return;
     }
     try {
@@ -424,13 +432,50 @@ export default function EditPodcastPage({ params }: { params: { id: string } }) 
           <div className="flex items-center justify-between">
             <button type="button" onClick={() => router.back()} className="px-6 py-3 rounded-lg font-medium transition-colors" style={{ backgroundColor: 'var(--color-backgroundSecondary)', color: 'var(--color-textPrimary)' }}>Cancel</button>
             <div className="flex items-center space-x-4">
-              <button type="button" onClick={handleDelete} disabled={saving} className="flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-colors text-red-500 hover:bg-red-500/10 disabled:opacity-50"><Trash2 size={16} /><span>Archive</span></button>
+              <button type="button" onClick={handleDeleteClick} disabled={saving} className="flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-colors text-red-500 hover:bg-red-500/10 disabled:opacity-50"><Trash2 size={16} /><span>Archive</span></button>
               <button type="button" onClick={(e) => handleSubmit(e, 'DRAFT')} disabled={saving} className="flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50" style={{ backgroundColor: 'var(--color-secondary)', color: 'var(--color-textPrimary)' }}><Save size={16} /><span>{saving ? 'Saving...' : 'Save Changes'}</span></button>
               <button type="button" onClick={(e) => handleSubmit(e, 'PENDING_APPROVAL')} disabled={saving} className="flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50" style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}><Send size={16} /><span>{saving ? 'Submitting...' : 'Submit for Review'}</span></button>
             </div>
           </div>
         </form>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-md p-6 rounded-lg shadow-xl" style={{ backgroundColor: 'var(--color-card)', border: '1px solid var(--color-border)' }}>
+            <h3 className="text-xl font-bold mb-2" style={{ color: 'var(--color-textPrimary)' }}>Archive Podcast</h3>
+            <p className="mb-6" style={{ color: 'var(--color-textSecondary)' }}>
+              Are you sure you want to archive this podcast? This action cannot be undone.
+            </p>
+            <div className="flex justify-end space-x-4">
+              <button
+                onClick={() => setDeleteModalOpen(false)}
+                disabled={isDeleting}
+                className="px-4 py-2 rounded-lg font-medium transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+                style={{ color: 'var(--color-textPrimary)' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={isDeleting}
+                className="flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Archiving...</span>
+                  </>
+                ) : (
+                  <span>Archive</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      <Toaster />
     </div>
   );
 }

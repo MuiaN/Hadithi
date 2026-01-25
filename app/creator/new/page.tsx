@@ -20,6 +20,8 @@ import useStore from '@/lib/store/useStore';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { upload } from '@vercel/blob/client';
+import { toast } from '@/components/ui/use-toast';
+import { Toaster } from '@/components/ui/toaster';
 
 // Dynamically import a rich text editor to avoid SSR issues
 const RichTextEditor = dynamic(() => import('@/components/ui/RichTextEditor'), { ssr: false });
@@ -62,7 +64,7 @@ export default function NewContentPage() {
     setSaving(true);
 
     if (formData.seriesId && (formData.chapterNumber === null || formData.chapterNumber === undefined)) {
-      alert('Chapter number is required when content is part of a series.');
+      toast({ title: 'Error', description: 'Chapter number is required when content is part of a series.', variant: 'destructive' });
       setSaving(false);
       return;
     }
@@ -107,6 +109,7 @@ export default function NewContentPage() {
   };
 
   useEffect(() => {
+    window.scrollTo(0, 0);
     const fetchData = async () => {
       try {
         const [seriesRes, galleriesRes, podcastsRes, tagsRes] = await Promise.all([
@@ -138,7 +141,7 @@ export default function NewContentPage() {
 
   const handleCreateSeries = async () => {
     if (!newSeriesTitle.trim()) {
-      alert('Series title cannot be empty.');
+      toast({ title: 'Error', description: 'Series title cannot be empty.', variant: 'destructive' });
       return;
     }
     try {
@@ -725,6 +728,7 @@ export default function NewContentPage() {
           </div>
         )}
       </div>
+      <Toaster />
     </div>
   );
 }

@@ -38,6 +38,10 @@ export default function RootLayout({
   }, [currentTheme, currentTemplate, setTheme, setTemplate]);
 
   useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  useEffect(() => {
     // Apply theme and template when they change (only after mount)
     if (mounted && currentTheme) {
       const theme = getTheme(currentTheme);

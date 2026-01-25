@@ -16,6 +16,8 @@ import Image from 'next/image';
 import useStore from '@/lib/store/useStore';
 import dynamic from 'next/dynamic';
 import { upload } from '@vercel/blob/client';
+import { toast } from '@/components/ui/use-toast';
+import { Toaster } from '@/components/ui/toaster';
 
 const RichTextEditor = dynamic(() => import('@/components/ui/RichTextEditor'), { ssr: false });
 
@@ -64,7 +66,7 @@ export default function CreatePodcastPage() {
   const handleSubmit = async (e: React.FormEvent, status: 'DRAFT' | 'PENDING_APPROVAL' = 'DRAFT') => {
     e.preventDefault();
     if (formData.seriesId && (formData.chapterNumber === null || formData.chapterNumber === undefined)) {
-      alert('Chapter number is required when content is part of a series.');
+      toast({ title: 'Error', description: 'Chapter number is required when content is part of a series.', variant: 'destructive' });
       setSaving(false);
       return;
     }
@@ -102,7 +104,7 @@ export default function CreatePodcastPage() {
       });
       data.append('audioFile', blob.url);
     } else if (status === 'PENDING_APPROVAL') {
-        alert('An audio file is required to submit a podcast for review.');
+        toast({ title: 'Error', description: 'An audio file is required to submit a podcast for review.', variant: 'destructive' });
         setSaving(false);
         return;
     }
@@ -122,6 +124,7 @@ export default function CreatePodcastPage() {
   };
 
   useEffect(() => {
+    window.scrollTo(0, 0);
     const fetchData = async () => {
       try {
         const [seriesRes, tagsRes] = await Promise.all([
@@ -166,7 +169,7 @@ export default function CreatePodcastPage() {
 
   const handleCreateSeries = async () => {
     if (!newSeriesTitle.trim()) {
-      alert('Series title cannot be empty.');
+      toast({ title: 'Error', description: 'Series title cannot be empty.', variant: 'destructive' });
       return;
     }
     try {
@@ -504,6 +507,7 @@ export default function CreatePodcastPage() {
           </div>
         </form>
       </div>
+      <Toaster />
     </div>
   );
 }

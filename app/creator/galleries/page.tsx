@@ -12,6 +12,7 @@ import { toast } from '@/components/ui/use-toast';
 import Link from 'next/link';
 import Image from 'next/image';
 import { upload } from '@vercel/blob/client';
+import { Toaster } from '@/components/ui/toaster';
 
 export interface GalleryImage {
   id: string;
@@ -53,6 +54,9 @@ export default function CreatorGalleriesPage() {
   const [newTag, setNewTag] = useState('');
   const [tagInputFocused, setTagInputFocused] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false); // To control modal visibility
+  const [galleryToDelete, setGalleryToDelete] = useState<string | null>(null); // To store the ID of the gallery to be deleted
+  const [isDeleting, setIsDeleting] = useState(false); // To show loading state on delete button
 
   const [formData, setFormData] = useState({
     title: '',
@@ -71,6 +75,7 @@ export default function CreatorGalleriesPage() {
   });
 
   useEffect(() => {
+    window.scrollTo(0, 0);
     const fetchGalleries = async () => {
       setLoading(true);
       try {
@@ -215,25 +220,36 @@ export default function CreatorGalleriesPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this gallery?')) return;
+  // Opens the delete confirmation modal
+  const handleDeleteClick = (id: string) => {
+    setGalleryToDelete(id);
+    setDeleteModalOpen(true);
+  };
 
+  // Confirms and executes the deletion
+  const confirmDelete = async () => {
+    if (!galleryToDelete) return;
+    
+    setIsDeleting(true);
     try {
-      const response = await fetch(`/api/v1/creator/galleries/${id}`, {
+      const response = await fetch(`/api/v1/creator/galleries/${galleryToDelete}`, {
         method: 'DELETE',
       });
       if (!response.ok) throw new Error('Failed to delete gallery');
-      setGalleries(galleries.filter(g => g.id !== id));
+      // Remove the gallery from the state to update the UI
+      setGalleries(galleries.filter(g => g.id !== galleryToDelete));
       toast({
         title: 'Success',
         description: 'Gallery deleted successfully',
       });
+      // Close the modal and reset state
+      setDeleteModalOpen(false);
+      setGalleryToDelete(null);
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: 'Failed to delete gallery',
-        variant: 'destructive',
-      });
+      console.error("Failed to delete gallery:", error);
+      toast({ title: 'Error', description: 'Failed to delete gallery', variant: 'destructive' });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -753,7 +769,7 @@ export default function CreatorGalleriesPage() {
                     </div>
                     <div className="absolute top-2 right-2">
                       <button
-                        onClick={() => handleDelete(gallery.id)}
+                        onClick={() => handleDeleteClick(gallery.id)}
                         className="p-2 rounded-full bg-white/20 text-white backdrop-blur-sm hover:bg-red-500/50 transition-colors"
                         title="Delete"
                       >
@@ -883,7 +899,7 @@ export default function CreatorGalleriesPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={() => handleDelete(gallery.id)}
+                        onClick={() => handleDeleteClick(gallery.id)}
                         className="p-2 h-auto rounded-lg transition-colors text-red-500 hover:bg-red-500/10"
                         title="Delete"
                       >
@@ -897,6 +913,43 @@ export default function CreatorGalleriesPage() {
           )
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-md p-6 rounded-lg shadow-xl" style={{ backgroundColor: 'var(--color-card)', border: '1px solid var(--color-border)' }}>
+            <h3 className="text-xl font-bold mb-2" style={{ color: 'var(--color-textPrimary)' }}>Delete Gallery</h3>
+            <p className="mb-6" style={{ color: 'var(--color-textSecondary)' }}>
+              Are you sure you want to delete this gallery? This action cannot be undone.
+            </p>
+            <div className="flex justify-end space-x-4">
+              <button
+                onClick={() => setDeleteModalOpen(false)}
+                disabled={isDeleting}
+                className="px-4 py-2 rounded-lg font-medium transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+                style={{ color: 'var(--color-textPrimary)' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={isDeleting}
+                className="flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <span>Delete</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      <Toaster />
     </div>
   );
 }

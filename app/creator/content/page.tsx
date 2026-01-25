@@ -21,6 +21,8 @@ import {
 } from 'lucide-react';
 import useStore from '@/lib/store/useStore';
 import Image from 'next/image';
+import { useToast } from '@/components/ui/use-toast';
+import { Toaster } from '@/components/ui/toaster';
 
 interface ContentItem {
   id: string;
@@ -41,12 +43,18 @@ export default function CreatorContentPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [contentToDelete, setContentToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const { user } = useStore();
   const router = useRouter();
+  const { toast } = useToast();
 
   useEffect(() => {
+    window.scrollTo(0, 0);
     const loadContent = async () => {
       try {
         const res = await fetch('/api/v1/creator/content');
@@ -64,13 +72,17 @@ export default function CreatorContentPage() {
     loadContent();
   }, []);
 
-  const handleDelete = async (contentId: string) => {
-    if (!confirm('Are you sure you want to delete this content?')) {
-      return;
-    }
+  const handleDeleteClick = (contentId: string) => {
+    setContentToDelete(contentId);
+    setDeleteModalOpen(true);
+  };
 
+  const confirmDelete = async () => {
+    if (!contentToDelete) return;
+    
+    setIsDeleting(true);
     try {
-      const res = await fetch(`/api/v1/creator/content/${contentId}`, {
+      const res = await fetch(`/api/v1/creator/content/${contentToDelete}`, {
         method: 'DELETE',
       });
 
@@ -79,11 +91,15 @@ export default function CreatorContentPage() {
       }
 
       // Update the state to reflect the change
-      setContent(prevContent => prevContent.filter(item => item.id !== contentId));
-      alert('Content deleted successfully.');
+      setContent(prevContent => prevContent.filter(item => item.id !== contentToDelete));
+      toast({ title: 'Success', description: 'Content deleted successfully.' });
+      setDeleteModalOpen(false);
+      setContentToDelete(null);
     } catch (error) {
       console.error('Error deleting content:', error);
-      alert('Failed to delete content.');
+      toast({ title: 'Error', description: 'Failed to delete content.', variant: 'destructive' });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -101,8 +117,12 @@ export default function CreatorContentPage() {
       filtered = filtered.filter((item: ContentItem) => item.status === statusFilter);
     }
 
+    if (typeFilter !== 'all') {
+      filtered = filtered.filter((item: ContentItem) => item.type === typeFilter);
+    }
+
     setFilteredContent(filtered);
-  }, [content, searchTerm, statusFilter]);
+  }, [content, searchTerm, statusFilter, typeFilter]);
 
   const formatDateTime = (dateString: string | null) => {
     if (!dateString) return null;
@@ -209,6 +229,26 @@ export default function CreatorContentPage() {
             <option value="REJECTED">Rejected</option>
           </select>
           </div>
+
+          <div className="flex items-center space-x-2">
+            <FileText size={16} style={{ color: 'var(--color-textSecondary)' }} />
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="px-3 py-2 rounded-lg border"
+              style={{
+                backgroundColor: 'var(--color-input)',
+                borderColor: 'var(--color-inputBorder)',
+                color: 'var(--color-textPrimary)'
+              }}
+            >
+              <option value="all">All Types</option>
+              <option value="STORY">Story</option>
+              <option value="ARTICLE">Article</option>
+              <option value="BOOK">Book</option>
+              <option value="PODCAST">Podcast</option>
+            </select>
+          </div>
         </div>
 
         {/* View Toggle */}
@@ -276,7 +316,7 @@ export default function CreatorContentPage() {
                 </div>
                 <div className="absolute top-2 right-2">
                   <button
-                    onClick={() => handleDelete(item.id)}
+                    onClick={() => handleDeleteClick(item.id)}
                     className="p-2 rounded-full bg-white/20 text-white backdrop-blur-sm hover:bg-red-500/50 transition-colors"
                     title="Archive"
                   >
@@ -401,7 +441,7 @@ export default function CreatorContentPage() {
                     <BarChart2 size={16} />
                   </Link>
                   <button
-                    onClick={() => handleDelete(item.id)}
+                      onClick={() => handleDeleteClick(item.id)}
                     className="p-2 rounded-lg transition-colors text-red-500 hover:bg-red-500/10"
                     title="Archive"
                   >
@@ -413,6 +453,43 @@ export default function CreatorContentPage() {
           </div>
         )
       )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-md p-6 rounded-lg shadow-xl" style={{ backgroundColor: 'var(--color-card)', border: '1px solid var(--color-border)' }}>
+            <h3 className="text-xl font-bold mb-2" style={{ color: 'var(--color-textPrimary)' }}>Delete Content</h3>
+            <p className="mb-6" style={{ color: 'var(--color-textSecondary)' }}>
+              Are you sure you want to delete this content? This action cannot be undone.
+            </p>
+            <div className="flex justify-end space-x-4">
+              <button
+                onClick={() => setDeleteModalOpen(false)}
+                disabled={isDeleting}
+                className="px-4 py-2 rounded-lg font-medium transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+                style={{ color: 'var(--color-textPrimary)' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={isDeleting}
+                className="flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <span>Delete</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      <Toaster />
     </div>
   );
 }

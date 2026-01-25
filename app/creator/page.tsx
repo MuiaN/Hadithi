@@ -23,6 +23,8 @@ import {
 } from 'lucide-react';
 import useStore from '@/lib/store/useStore';
 import Image from 'next/image';
+import { useToast } from '@/components/ui/use-toast';
+import { Toaster } from '@/components/ui/toaster';
 
 interface ContentItem {
   id: string;
@@ -47,12 +49,18 @@ export default function CreatorDashboard() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [typeFilter, setTypeFilter] = useState('all');
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('grid');
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [contentToDelete, setContentToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   const { user, isAuthenticated } = useStore();
   const router = useRouter();
+  const { toast } = useToast();
 
   useEffect(() => {
+    window.scrollTo(0, 0);
     const loadCreatorData = async () => {
       try {
         const contentRes = await fetch('/api/v1/creator/content');
@@ -70,13 +78,17 @@ export default function CreatorDashboard() {
     loadCreatorData();
   }, []);
 
-  const handleDelete = async (contentId: string) => {
-    if (!confirm('Are you sure you want to delete this content?')) {
-      return;
-    }
+  const handleDeleteClick = (contentId: string) => {
+    setContentToDelete(contentId);
+    setDeleteModalOpen(true);
+  };
 
+  const confirmDelete = async () => {
+    if (!contentToDelete) return;
+    
+    setIsDeleting(true);
     try {
-      const res = await fetch(`/api/v1/creator/content/${contentId}`, {
+      const res = await fetch(`/api/v1/creator/content/${contentToDelete}`, {
         method: 'DELETE',
       });
 
@@ -85,11 +97,15 @@ export default function CreatorDashboard() {
       }
 
       // Update the state to reflect the change
-      setMyContent(prevContent => prevContent.filter(item => item.id !== contentId));
-      alert('Content deleted successfully.');
+      setMyContent(prevContent => prevContent.filter(item => item.id !== contentToDelete));
+      toast({ title: 'Success', description: 'Content deleted successfully.' });
+      setDeleteModalOpen(false);
+      setContentToDelete(null);
     } catch (error) {
       console.error('Error deleting content:', error);
-      alert('Failed to delete content.');
+      toast({ title: 'Error', description: 'Failed to delete content.', variant: 'destructive' });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -107,8 +123,12 @@ export default function CreatorDashboard() {
       filtered = filtered.filter((item) => item.status === statusFilter);
     }
 
+    if (typeFilter !== 'all') {
+      filtered = filtered.filter((item) => item.type === typeFilter);
+    }
+
     return filtered;
-  }, [myContent, searchTerm, statusFilter]);
+  }, [myContent, searchTerm, statusFilter, typeFilter]);
 
   const stats = useMemo(() => ({
     total: myContent.length,
@@ -181,7 +201,7 @@ export default function CreatorDashboard() {
   }
 
   return (
-    <div className="p-8">
+    <div className="p-8" style={{ backgroundColor: 'var(--color-background)' }}>
         {/* Header */}
         <div className="mb-8">
           <div className="flex items-center justify-between">
@@ -312,6 +332,21 @@ export default function CreatorDashboard() {
                   <option value="REJECTED">Rejected</option>
                 </select>
               </div>
+              <div className="relative">
+                <FileText className="absolute left-3 top-1/2 transform -translate-y-1/2" size={16} style={{ color: 'var(--color-textTertiary)' }} />
+                <select
+                  value={typeFilter}
+                  onChange={(e) => setTypeFilter(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 rounded-lg border appearance-none"
+                  style={{ backgroundColor: 'var(--color-input)', borderColor: 'var(--color-inputBorder)', color: 'var(--color-textPrimary)' }}
+                >
+                  <option value="all">All Types</option>
+                  <option value="STORY">Story</option>
+                  <option value="ARTICLE">Article</option>
+                  <option value="BOOK">Book</option>
+                  <option value="PODCAST">Podcast</option>
+                </select>
+              </div>
               <div className="flex items-center bg-[var(--color-input)] rounded-lg border border-[var(--color-inputBorder)] p-1">
                 <button
                   onClick={() => setViewMode('grid')}
@@ -428,7 +463,7 @@ export default function CreatorDashboard() {
                         <BarChart2 size={16} />
                     </Link>
                     <button
-                      onClick={() => handleDelete(item.id)}
+                      onClick={() => handleDeleteClick(item.id)}
                       className="p-2 rounded-lg transition-colors text-red-500 hover:bg-red-500/10"
                       title="Archive"
                     >
@@ -463,7 +498,7 @@ export default function CreatorDashboard() {
                       </div>
                       <div className="absolute top-2 right-2">
                         <button
-                          onClick={() => handleDelete(item.id)}
+                    onClick={() => handleDeleteClick(item.id)}
                           className="p-2 rounded-full bg-white/20 text-white backdrop-blur-sm hover:bg-red-500/50 transition-colors"
                           title="Archive"
                         >
@@ -523,6 +558,43 @@ export default function CreatorDashboard() {
             )
           )}
         </div>
-      </div>
+
+      {/* Delete Confirmation Modal */}
+      {deleteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-md p-6 rounded-lg shadow-xl" style={{ backgroundColor: 'var(--color-card)', border: '1px solid var(--color-border)' }}>
+            <h3 className="text-xl font-bold mb-2" style={{ color: 'var(--color-textPrimary)' }}>Delete Content</h3>
+            <p className="mb-6" style={{ color: 'var(--color-textSecondary)' }}>
+              Are you sure you want to delete this content? This action cannot be undone.
+            </p>
+            <div className="flex justify-end space-x-4">
+              <button
+                onClick={() => setDeleteModalOpen(false)}
+                disabled={isDeleting}
+                className="px-4 py-2 rounded-lg font-medium transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+                style={{ color: 'var(--color-textPrimary)' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={isDeleting}
+                className="flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <span>Delete</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      <Toaster />
+    </div>
   );
 }

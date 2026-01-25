@@ -4,7 +4,9 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link'; 
 import { notFound, useRouter } from 'next/navigation';
-import { ArrowLeft, Edit, Calendar, Eye, Tag, CheckCircle, XCircle, AlertCircle, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Edit, Calendar, Eye, Tag, CheckCircle, XCircle, AlertCircle, Clock, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
+import { useToast } from '@/components/ui/use-toast';
+import { Toaster } from '@/components/ui/toaster';
 
 interface GalleryImage {
   id: string;
@@ -34,8 +36,12 @@ export default function GalleryViewPage({ params }: { params: { id: string } }) 
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const router = useRouter();
+  const { toast } = useToast();
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
+    window.scrollTo(0, 0);
     const fetchGallery = async () => {
       try {
         const res = await fetch(`/api/v1/creator/galleries/${params.id}`);
@@ -84,6 +90,35 @@ export default function GalleryViewPage({ params }: { params: { id: string } }) 
     e?.stopPropagation();
     if (!gallery) return;
     setCurrentImageIndex((prev) => (prev - 1 + gallery.images.length) % gallery.images.length);
+  };
+
+  const handleDeleteClick = () => {
+    setDeleteModalOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/v1/creator/galleries/${params.id}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) throw new Error('Failed to delete gallery');
+      
+      toast({
+        title: 'Success',
+        description: 'Gallery deleted successfully',
+      });
+      router.push('/creator/galleries');
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to delete gallery',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsDeleting(false);
+      setDeleteModalOpen(false);
+    }
   };
 
   if (loading) {
@@ -178,7 +213,11 @@ export default function GalleryViewPage({ params }: { params: { id: string } }) 
              <button onClick={() => router.back()} className="flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors" style={{ backgroundColor: 'var(--color-card)', color: 'var(--color-textPrimary)', border: '1px solid var(--color-border)' }}>
               <ArrowLeft size={16} />
               <span>Back</span>
-            </button>            
+            </button>
+            <button onClick={handleDeleteClick} className="flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors text-red-500 hover:bg-red-500/10" style={{ backgroundColor: 'var(--color-card)', border: '1px solid var(--color-border)' }}>
+              <Trash2 size={16} />
+              <span>Delete Gallery</span>
+            </button>
           </div>
           
           {gallery.description && (
@@ -251,6 +290,43 @@ export default function GalleryViewPage({ params }: { params: { id: string } }) 
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-md p-6 rounded-lg shadow-xl" style={{ backgroundColor: 'var(--color-card)', border: '1px solid var(--color-border)' }}>
+            <h3 className="text-xl font-bold mb-2" style={{ color: 'var(--color-textPrimary)' }}>Delete Gallery</h3>
+            <p className="mb-6" style={{ color: 'var(--color-textSecondary)' }}>
+              Are you sure you want to delete this gallery? This action cannot be undone.
+            </p>
+            <div className="flex justify-end space-x-4">
+              <button
+                onClick={() => setDeleteModalOpen(false)}
+                disabled={isDeleting}
+                className="px-4 py-2 rounded-lg font-medium transition-colors hover:bg-gray-100 dark:hover:bg-gray-800"
+                style={{ color: 'var(--color-textPrimary)' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={isDeleting}
+                className="flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+              >
+                {isDeleting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Deleting...</span>
+                  </>
+                ) : (
+                  <span>Delete</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      <Toaster />
     </div>
   );
 }
