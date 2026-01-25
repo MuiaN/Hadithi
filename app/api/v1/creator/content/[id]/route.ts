@@ -302,12 +302,22 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       coverImageUrl = coverImageEntry;
     }
 
+    // Cleanup old cover image if replaced
+    if (coverImageUrl && contentItem.coverImage && coverImageUrl !== contentItem.coverImage) {
+      await deleteFile(contentItem.coverImage);
+    }
+
     let audioFileUrl: string | undefined = updateData.audioFile;
     if (audioFileEntry instanceof File) {
       const savedUrl = await saveFile(audioFileEntry, 'podcasts');
       if (savedUrl) audioFileUrl = savedUrl;
     } else if (typeof audioFileEntry === 'string') {
       audioFileUrl = audioFileEntry;
+    }
+
+    // Cleanup old audio file if replaced
+    if (audioFileUrl && contentItem.audioFile && audioFileUrl !== contentItem.audioFile) {
+      await deleteFile(contentItem.audioFile);
     }
 
     const updatedContent = await prisma.content.update({

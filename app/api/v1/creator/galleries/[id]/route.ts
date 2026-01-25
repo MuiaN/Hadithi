@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getAuth } from '@/lib/auth';
-import { z } from 'zod';
 import { SubscriptionTier, ContentStatus } from '@prisma/client';
-import { writeFile, mkdir, unlink, rmdir } from 'fs/promises';
+import { writeFile, mkdir, unlink, rm } from 'fs/promises';
 import path from 'path';
 import { put, del } from '@vercel/blob';
 
@@ -214,9 +213,9 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
 
     for (const dir of Array.from(dirsToCheck)) {
       try {
-        await rmdir(dir);
+        await rm(dir, { recursive: true, force: true });
       } catch (e) {
-        // Ignore if directory is not empty or doesn't exist
+        console.error(`Failed to remove directory ${dir}:`, e);
       }
     }
 
