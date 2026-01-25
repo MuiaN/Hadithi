@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { getAuth } from '@/lib/auth';
 
 /**
  * @swagger
@@ -22,6 +23,11 @@ import prisma from '@/lib/prisma';
  *         description: Content not found.
  */
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+  const user = await getAuth(req);
+  if (!user || (user.role !== 'EDITOR' && user.role !== 'ADMIN')) {
+    return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+  }
+
   const { id } = params;
 
   try {

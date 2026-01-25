@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { getAuth } from '@/lib/auth';
 
 /**
  * @swagger
@@ -15,6 +16,11 @@ import prisma from '@/lib/prisma';
  *         description: Internal server error.
  */
 export async function GET(req: NextRequest) {
+  const user = await getAuth(req);
+  if (!user || (user.role !== 'EDITOR' && user.role !== 'ADMIN')) {
+    return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const comments = await prisma.comment.findMany({
       orderBy: { createdAt: 'desc' },

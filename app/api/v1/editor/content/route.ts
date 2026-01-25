@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { ContentStatus } from '@prisma/client';
+import { getAuth } from '@/lib/auth';
 
 /**
  * @swagger
@@ -29,15 +30,21 @@ import { ContentStatus } from '@prisma/client';
  *         description: Internal server error.
  */
 export async function GET(req: NextRequest) {
-  // In a real app, you'd get the user from a session and verify their role (EDITOR/ADMIN) here.
-  // This would be handled by middleware injecting user data into the request.
+  const user = await getAuth(req);
+  if (!user || (user.role !== 'EDITOR' && user.role !== 'ADMIN')) {
+    return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+  }
 
   const { searchParams } = new URL(req.url);
   const status = searchParams.get('status') as ContentStatus | null;
 
   try {
     const content = await prisma.content.findMany({
-      where: status ? { status } : {},
+      where: status ? { status } : {
+        status: {
+          in: [ContentStatus.PENDING_APPROVAL, ContentStatus.PUBLISHED, ContentStatus.REJECTED]
+        }
+      },
       orderBy: { updatedAt: 'desc' },
       include: {
         author: { select: { name: true } },
@@ -45,15 +52,7 @@ export async function GET(req: NextRequest) {
       },
     });
 
-    // Convert coverImage Buffer to base64 data URL for client-side rendering
-    const contentWithImages = content.map((item: any) => ({
-      ...item,
-      coverImage: item.coverImage
-        ? `data:image/jpeg;base64,${Buffer.from(item.coverImage).toString('base64')}`
-        : null,
-    }));
-
-    return NextResponse.json(contentWithImages);
+    return NextResponse.json(content);
   } catch (error) {
     console.error('Failed to fetch content for editor:', error);
     return NextResponse.json({ message: 'An internal server error occurred' }, { status: 500 });

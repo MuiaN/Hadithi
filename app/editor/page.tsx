@@ -29,6 +29,7 @@ interface ContentItem {
   _count: { likes: number };
   coverImage: string | null;
   description: string;
+  audioFile?: string | null;
 }
 export default function EditorDashboard() {
   const [content, setContent] = useState<ContentItem[]>([]);
@@ -36,9 +37,8 @@ export default function EditorDashboard() {
   const [stats, setStats] = useState({
     total: 0,
     published: 0,
-    draft: 0, // DRAFT status
-    archived: 0, // ARCHIVED status
-    pendingReview: 0 // PENDING_APPROVAL status
+    pendingReview: 0, // PENDING_APPROVAL status
+    rejected: 0
   });
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
@@ -60,16 +60,14 @@ export default function EditorDashboard() {
         // Calculate stats on the client-side
         const total = contentData.length;
         const published = contentData.filter((c: ContentItem) => c.status === 'PUBLISHED').length;
-        const draft = contentData.filter((c: ContentItem) => c.status === 'DRAFT').length;
-        const archived = contentData.filter((c: ContentItem) => c.status === 'ARCHIVED').length;
         const pendingReview = contentData.filter((c: ContentItem) => c.status === 'PENDING_APPROVAL').length;
+        const rejected = contentData.filter((c: ContentItem) => c.status === 'REJECTED').length;
 
         setStats({
           total,
           published,
-          draft,
-          archived,
           pendingReview,
+          rejected,
         });
         setContent(contentData);
         setFilteredContent(contentData);
@@ -166,6 +164,14 @@ export default function EditorDashboard() {
     });
   };
 
+  const formatTime = (dateString: string) => {
+    return new Date(dateString).toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ backgroundColor: 'var(--color-background)' }}>
@@ -199,7 +205,7 @@ export default function EditorDashboard() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <div className="p-6 rounded-lg" style={{ backgroundColor: 'var(--color-card)', border: '1px solid var(--color-border)' }}>
             <div className="flex items-center justify-between">
               <div>
@@ -246,24 +252,10 @@ export default function EditorDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium" style={{ color: 'var(--color-textSecondary)' }}>
-                  Draft
+                  Rejected
                 </p>
                 <p className="text-2xl font-bold" style={{ color: 'var(--color-textPrimary)' }}>
-                  {stats.draft}
-                </p>
-              </div>
-              <AlertCircle size={24} style={{ color: 'var(--color-warning)' }} />
-            </div>
-          </div>
-
-          <div className="p-6 rounded-lg" style={{ backgroundColor: 'var(--color-card)', border: '1px solid var(--color-border)' }}>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium" style={{ color: 'var(--color-textSecondary)' }}>
-                  Archived
-                </p>
-                <p className="text-2xl font-bold" style={{ color: 'var(--color-textPrimary)' }}>
-                  {stats.archived}
+                  {stats.rejected}
                 </p>
               </div>
               <XCircle size={24} style={{ color: 'var(--color-error)' }} />
@@ -304,9 +296,7 @@ export default function EditorDashboard() {
               <option value="all">All Status</option>
               <option value="PENDING_APPROVAL">Pending Review</option>
               <option value="PUBLISHED">Published</option>
-              <option value="DRAFT">Draft</option>
               <option value="REJECTED">Rejected</option>
-              <option value="ARCHIVED">Archived</option>
             </select>
           </div>
         </div>
@@ -342,13 +332,19 @@ export default function EditorDashboard() {
                   <tr key={item.id} className="hover:bg-opacity-50" style={{ backgroundColor: 'transparent' }}>
                     <td className="px-6 py-4">
                       <div className="flex items-center space-x-3">
-                        <Image
-                          src={item.coverImage || '/images/placeholder.png'}
-                          alt={item.title}
-                          className="w-12 h-12 rounded-lg object-cover"
-                          width={48}
-                          height={48}
-                        />
+                        {item.coverImage ? (
+                          <Image
+                            src={item.coverImage}
+                            alt={item.title}
+                            className="w-12 h-12 rounded-lg object-cover"
+                            width={48}
+                            height={48}
+                          />
+                        ) : (
+                          <div className="w-12 h-12 rounded-lg bg-gray-200 dark:bg-gray-700 flex items-center justify-center flex-shrink-0">
+                            <FileText size={20} className="text-gray-400" />
+                          </div>
+                        )}
                         <div>
                           <h3 className="font-medium line-clamp-1" style={{ color: 'var(--color-textPrimary)' }}>
                             {item.title}
@@ -373,10 +369,8 @@ export default function EditorDashboard() {
                           className={`text-xs font-medium px-2 py-1 rounded-full border-0 ${getStatusColor(item.status)}`}
                         >
                           <option value="PENDING_APPROVAL">Pending</option>
-                          <option value="DRAFT">Draft</option>
                           <option value="PUBLISHED">Published</option>
                           <option value="REJECTED">Rejected</option>
-                          <option value="ARCHIVED">Archived</option>
                         </select>
                       </div>
                     </td>
@@ -389,9 +383,14 @@ export default function EditorDashboard() {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="text-sm" style={{ color: 'var(--color-textSecondary)' }}>
-                        {formatDate(item.createdAt)}
-                      </span>
+                      <div className="flex flex-col">
+                        <span className="text-sm" style={{ color: 'var(--color-textSecondary)' }}>
+                          {formatDate(item.createdAt)}
+                        </span>
+                        <span className="text-xs" style={{ color: 'var(--color-textTertiary)' }}>
+                          {formatTime(item.createdAt)}
+                        </span>
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center space-x-2">

@@ -1,7 +1,13 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
+import { getAuth } from '@/lib/auth';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const user = await getAuth(req);
+  if (!user || (user.role !== 'EDITOR' && user.role !== 'ADMIN')) {
+    return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     // Aggregate content stats
     const contentStats = await prisma.content.aggregate({

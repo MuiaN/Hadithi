@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { z } from 'zod';
+import { getAuth } from '@/lib/auth';
 
 const updateContentSchema = z.object({
   title: z.string().min(1).optional(),
@@ -38,6 +39,11 @@ const updateContentSchema = z.object({
  *         description: Content not found.
  */
 export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+  const user = await getAuth(req);
+  if (!user || (user.role !== 'EDITOR' && user.role !== 'ADMIN')) {
+    return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+  }
+
   const { id } = params;
   const body = await req.json();
   const validation = updateContentSchema.safeParse(body);
