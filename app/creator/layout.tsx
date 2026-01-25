@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import CreatorSidebar from '@/components/Layout/CreatorSidebar';
 
 export default function CreatorLayout({
@@ -7,6 +9,12 @@ export default function CreatorLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
   return (
     <div className="sidebar-layout" style={{ backgroundColor: 'var(--color-background)' }}>
       <CreatorSidebar />
