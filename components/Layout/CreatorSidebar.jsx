@@ -18,7 +18,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Shield,
-  LogOut
+  LogOut,
+  BookOpen,
+  Newspaper
 } from 'lucide-react';
 import useStore from '@/lib/store/useStore';
 import Image from 'next/image';
@@ -52,9 +54,19 @@ export default function CreatorSidebar() {
       exact: true
     },
     {
-      href: '/creator/new',
+      href: '/creator/story',
       icon: Plus,
-      label: 'Create Content'
+      label: 'Create Story'
+    },
+    {
+      href: '/creator/articles',
+      icon: Newspaper,
+      label: 'Create Article'
+    },
+    {
+      href: '/creator/books',
+      icon: BookOpen,
+      label: 'Create Book'
     },
     {
       href: '/creator/create-podcast',

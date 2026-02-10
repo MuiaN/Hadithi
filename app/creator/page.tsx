@@ -19,7 +19,12 @@ import {
   Heart,
   LayoutGrid,
   List,
-  BarChart2
+  BarChart2,
+  ChevronDown,
+  BookOpen,
+  Mic,
+  Newspaper,
+  Image as ImageIcon
 } from 'lucide-react';
 import useStore from '@/lib/store/useStore';
 import Image from 'next/image';
@@ -54,6 +59,7 @@ export default function CreatorDashboard() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [contentToDelete, setContentToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isNewContentOpen, setIsNewContentOpen] = useState(false);
   
   const { user, isAuthenticated } = useStore();
   const router = useRouter();
@@ -222,14 +228,45 @@ export default function CreatorDashboard() {
                   day: 'numeric' 
                 })}</span>
               </div>
-              <button
-                onClick={() => router.push('/creator/new')}
-                className="flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
-                style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}
-              >
-                <Plus size={16} />
-                <span>New Content</span>
-              </button>
+              <div className="relative">
+                <button
+                  onClick={() => setIsNewContentOpen(!isNewContentOpen)}
+                  className="flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                  style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}
+                >
+                  <Plus size={16} />
+                  <span>New Content</span>
+                  <ChevronDown size={16} />
+                </button>
+
+                {isNewContentOpen && (
+                  <div 
+                    className="absolute right-0 top-full mt-2 w-48 rounded-lg shadow-lg border z-50 overflow-hidden"
+                    style={{ backgroundColor: 'var(--color-card)', borderColor: 'var(--color-border)' }}
+                  >
+                    <Link href="/creator/story" className="flex items-center space-x-2 px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                      <FileText size={16} className="text-blue-500" />
+                      <span style={{ color: 'var(--color-textPrimary)' }}>Story</span>
+                    </Link>
+                    <Link href="/creator/articles" className="flex items-center space-x-2 px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                      <Newspaper size={16} className="text-green-500" />
+                      <span style={{ color: 'var(--color-textPrimary)' }}>Article</span>
+                    </Link>
+                    <Link href="/creator/books" className="flex items-center space-x-2 px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                      <BookOpen size={16} className="text-purple-500" />
+                      <span style={{ color: 'var(--color-textPrimary)' }}>Book</span>
+                    </Link>
+                    <Link href="/creator/create-podcast" className="flex items-center space-x-2 px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                      <Mic size={16} className="text-orange-500" />
+                      <span style={{ color: 'var(--color-textPrimary)' }}>Podcast</span>
+                    </Link>
+                    <Link href="/creator/galleries" className="flex items-center space-x-2 px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                      <ImageIcon size={16} className="text-pink-500" />
+                      <span style={{ color: 'var(--color-textPrimary)' }}>Gallery</span>
+                    </Link>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -442,14 +479,26 @@ export default function CreatorDashboard() {
                   
                   <div className="flex items-center space-x-2">
                     <Link
-                      href={item.type === 'PODCAST' ? `/creator/podcast/${item.id}` : `/creator/content/${item.id}`}
+                      href={
+                        item.type === 'PODCAST' ? `/creator/podcast/${item.id}` :
+                        item.type === 'STORY' ? `/creator/story/${item.id}` :
+                        item.type === 'BOOK' ? `/creator/books/${item.id}` :
+                        item.type === 'ARTICLE' ? `/creator/articles/${item.id}` :
+                        `/creator/content/${item.id}`
+                      }
                       className="p-2 rounded-lg transition-colors text-gray-500 hover:bg-gray-500/10"
                       title="View"
                     >
                       <Eye size={16} />
                     </Link>
                     <Link
-                      href={item.type === 'PODCAST' ? `/creator/podcast/edit/${item.id}` : `/creator/edit/${item.id}`}
+                      href={
+                        item.type === 'PODCAST' ? `/creator/podcast/edit/${item.id}` :
+                        item.type === 'STORY' ? `/creator/story/edit/${item.id}` :
+                        item.type === 'BOOK' ? `/creator/books/edit/${item.id}` :
+                        item.type === 'ARTICLE' ? `/creator/articles/edit/${item.id}` :
+                        `/creator/edit/${item.id}`
+                      }
                       className="p-2 rounded-lg transition-colors text-blue-500 hover:bg-blue-500/10"
                       title="Edit"
                     >
@@ -527,7 +576,13 @@ export default function CreatorDashboard() {
 
                       <div className="flex items-center space-x-2">
                         <Link
-                          href={item.type === 'PODCAST' ? `/creator/podcast/${item.id}` : `/creator/content/${item.id}`}
+                          href={
+                            item.type === 'PODCAST' ? `/creator/podcast/${item.id}` :
+                            item.type === 'STORY' ? `/creator/story/${item.id}` :
+                            item.type === 'BOOK' ? `/creator/books/${item.id}` :
+                            item.type === 'ARTICLE' ? `/creator/articles/${item.id}` :
+                            `/creator/content/${item.id}`
+                          }
                           className="flex-1 flex items-center justify-center space-x-1 py-2 px-3 rounded-lg text-sm transition-colors"
                           style={{ backgroundColor: 'var(--color-backgroundSecondary)', color: 'var(--color-textPrimary)' }}
                         >
@@ -535,7 +590,13 @@ export default function CreatorDashboard() {
                           <span>View</span>
                         </Link>
                         <Link
-                          href={item.type === 'PODCAST' ? `/creator/podcast/edit/${item.id}` : `/creator/edit/${item.id}`}
+                          href={
+                            item.type === 'PODCAST' ? `/creator/podcast/edit/${item.id}` :
+                            item.type === 'STORY' ? `/creator/story/edit/${item.id}` :
+                            item.type === 'BOOK' ? `/creator/books/edit/${item.id}` :
+                            item.type === 'ARTICLE' ? `/creator/articles/edit/${item.id}` :
+                            `/creator/edit/${item.id}`
+                          }
                           className="flex-1 flex items-center justify-center space-x-1 py-2 px-3 rounded-lg text-sm transition-colors"
                           style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}
                         >
