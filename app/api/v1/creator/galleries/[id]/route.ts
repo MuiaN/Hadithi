@@ -69,7 +69,10 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
   try {
     const gallery = await prisma.gallery.findFirst({
       where: {
-        id: params.id,
+        OR: [
+          { id: params.id },
+          { slug: params.id }
+        ],
         authorId: user.id,
       },
       include: {
@@ -91,8 +94,13 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
   }
 
-  const gallery = await prisma.gallery.findUnique({
-    where: { id: params.id },
+  const gallery = await prisma.gallery.findFirst({
+    where: {
+      OR: [
+        { id: params.id },
+        { slug: params.id }
+      ]
+    },
     include: { images: true },
   });
 
@@ -159,7 +167,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     }
 
     const updatedGallery = await prisma.gallery.update({
-      where: { id: params.id },
+      where: { id: gallery.id },
       data: {
         title,
         description,
@@ -186,8 +194,13 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
   }
 
-  const gallery = await prisma.gallery.findUnique({
-    where: { id: params.id },
+  const gallery = await prisma.gallery.findFirst({
+    where: {
+      OR: [
+        { id: params.id },
+        { slug: params.id }
+      ]
+    },
     include: { images: true }
   });
 
@@ -222,10 +235,10 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     // Use a transaction to delete images and then the gallery
     await prisma.$transaction([
       prisma.galleryImage.deleteMany({
-        where: { galleryId: params.id },
+        where: { galleryId: gallery.id },
       }),
       prisma.gallery.delete({
-        where: { id: params.id },
+        where: { id: gallery.id },
       }),
     ]);
 

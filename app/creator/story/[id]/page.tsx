@@ -25,6 +25,7 @@ interface RelatedContentItem {
   status: string;
   chapterNumber: number | null;
   coverImage: string | null;
+  slug?: string | null;
 }
 
 interface ContentData {
@@ -208,7 +209,7 @@ export default function StoryViewPage({ params }: { params: { id: string } }) {
             <ul className="space-y-4">
               {content.relatedContent.map(item => (
                 <li key={item.id}>
-                  <Link href={item.type === 'STORY' ? `/creator/story/${item.id}` : `/creator/content/${item.id}`} className="flex items-center space-x-3 group">
+                  <Link href={item.type === 'STORY' ? `/creator/story/${item.slug || item.id}` : `/creator/content/${item.slug || item.id}`} className="flex items-center space-x-3 group">
                     <div className="flex-shrink-0">
                       <Image
                         src={item.coverImage || '/images/placeholder.png'}

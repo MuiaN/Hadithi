@@ -40,7 +40,7 @@ interface PodcastData {
     comments: number;
   };
   views: number;
-  linkedFromContent: { id: string; title: string }[];
+  linkedFromContent: { id: string; title: string; slug?: string | null }[];
 }
 
 export default function CreatorPodcastViewPage({ params }: { params: { id:string } }) {
@@ -194,7 +194,7 @@ export default function CreatorPodcastViewPage({ params }: { params: { id:string
                 <ul className="space-y-2">
                   {podcast.linkedFromContent.map(content => (
                     <li key={content.id}>
-                      <Link href={`/creator/content/${content.id}`} className="text-sm hover:underline" style={{ color: 'var(--color-primary)' }}>
+                      <Link href={`/creator/content/${content.slug || content.id}`} className="text-sm hover:underline" style={{ color: 'var(--color-primary)' }}>
                         {content.title}
                       </Link>
                     </li>

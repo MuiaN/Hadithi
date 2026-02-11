@@ -106,7 +106,8 @@ export default function AdminSidebar() {
       className={`sidebar-container ${collapsed ? 'collapsed' : ''}`}
       style={{ 
         backgroundColor: 'var(--color-card)',
-        borderRight: '1px solid var(--color-border)'
+        borderRight: '1px solid var(--color-border)',
+        zIndex: 100
       }}
     >
       {/* User Info */}
@@ -214,7 +215,7 @@ export default function AdminSidebar() {
                 <div className="relative">
                   <item.icon className={collapsed ? 'sidebar-icon-collapsed' : 'sidebar-icon-expanded'} />
                   {collapsed && (
-                    <div className="sidebar-tooltip">
+                    <div className="sidebar-tooltip" style={{ zIndex: 200 }}>
                       {item.label}
                     </div>
                   )}
@@ -243,7 +244,7 @@ export default function AdminSidebar() {
           <div className="relative">
             <LogOut className={collapsed ? 'sidebar-icon-collapsed' : 'sidebar-icon-expanded'} />
             {collapsed && (
-              <div className="sidebar-tooltip">
+              <div className="sidebar-tooltip" style={{ zIndex: 200 }}>
                 Logout
               </div>
             )}

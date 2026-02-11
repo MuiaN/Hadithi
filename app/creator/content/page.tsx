@@ -32,6 +32,7 @@ import { Toaster } from '@/components/ui/toaster';
 interface ContentItem {
   id: string;
   title: string;
+  slug?: string | null;
   type: 'STORY' | 'ARTICLE' | 'BOOK' | 'PODCAST';
   status: 'DRAFT' | 'PUBLISHED' | 'ARCHIVED' | 'PENDING_APPROVAL' | 'REJECTED';
   publishedAt: string | null;
@@ -162,6 +163,21 @@ export default function CreatorContentPage() {
       case 'DRAFT': return <AlertCircle size={16} className="text-yellow-500" />;
       case 'REJECTED': return <XCircle size={16} className="text-red-500" />;
       default: return <XCircle size={16} className="text-red-500" />;
+    }
+  };
+
+  const getTypeStyles = (type: string) => {
+    switch (type) {
+      case 'STORY':
+        return 'bg-blue-500/90 text-white';
+      case 'ARTICLE':
+        return 'bg-green-500/90 text-white';
+      case 'BOOK':
+        return 'bg-purple-500/90 text-white';
+      case 'PODCAST':
+        return 'bg-orange-500/90 text-white';
+      default:
+        return 'bg-gray-500/90 text-white';
     }
   };
 
@@ -347,14 +363,14 @@ export default function CreatorContentPage() {
                   <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(item.status)}`}>
                     {item.status.toLowerCase()}
                   </span>
-                  <span className="px-2 py-1 text-xs font-medium rounded-full bg-black/60 text-white backdrop-blur-md capitalize">
+                  <span className={`px-2 py-1 text-xs font-medium rounded-full backdrop-blur-md capitalize ${getTypeStyles(item.type)}`}>
                     {item.type.toLowerCase()}
                   </span>
                 </div>
                 <div className="absolute top-2 right-2">
                   <button
                     onClick={() => handleDeleteClick(item.id)}
-                    className="p-2 rounded-full bg-white/20 text-white backdrop-blur-sm hover:bg-red-500/50 transition-colors"
+                    className="p-2 rounded-full bg-white border border-red-500 text-red-500 shadow-sm hover:bg-red-500 hover:text-white transition-colors"
                     title="Archive"
                   >
                     <Trash2 size={16} />
@@ -383,11 +399,11 @@ export default function CreatorContentPage() {
                 <div className="flex items-center space-x-2">
                   <Link
                     href={
-                      item.type === 'PODCAST' ? `/creator/podcast/${item.id}` :
-                      item.type === 'STORY' ? `/creator/story/${item.id}` :
-                      item.type === 'BOOK' ? `/creator/books/${item.id}` :
-                      item.type === 'ARTICLE' ? `/creator/articles/${item.id}` :
-                      `/creator/content/${item.id}`
+                      item.type === 'PODCAST' ? `/creator/podcast/${item.slug || item.id}` :
+                      item.type === 'STORY' ? `/creator/story/${item.slug || item.id}` :
+                      item.type === 'BOOK' ? `/creator/books/${item.slug || item.id}` :
+                      item.type === 'ARTICLE' ? `/creator/articles/${item.slug || item.id}` :
+                      `/creator/content/${item.slug || item.id}`
                     }
                     className="flex-1 flex items-center justify-center space-x-1 py-2 px-3 rounded-lg text-sm transition-colors"
                     style={{ backgroundColor: 'var(--color-backgroundSecondary)', color: 'var(--color-textPrimary)' }}
@@ -397,11 +413,11 @@ export default function CreatorContentPage() {
                   </Link>
                   <Link
                     href={
-                      item.type === 'PODCAST' ? `/creator/podcast/edit/${item.id}` :
-                      item.type === 'STORY' ? `/creator/story/edit/${item.id}` :
-                      item.type === 'BOOK' ? `/creator/books/edit/${item.id}` :
-                      item.type === 'ARTICLE' ? `/creator/articles/edit/${item.id}` :
-                      `/creator/edit/${item.id}`
+                      item.type === 'PODCAST' ? `/creator/podcast/edit/${item.slug || item.id}` :
+                      item.type === 'STORY' ? `/creator/story/edit/${item.slug || item.id}` :
+                      item.type === 'BOOK' ? `/creator/books/edit/${item.slug || item.id}` :
+                      item.type === 'ARTICLE' ? `/creator/articles/edit/${item.slug || item.id}` :
+                      `/creator/edit/${item.slug || item.id}`
                     }
                     className="flex-1 flex items-center justify-center space-x-1 py-2 px-3 rounded-lg text-sm transition-colors"
                     style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}
@@ -410,7 +426,7 @@ export default function CreatorContentPage() {
                     <span>Edit</span>
                   </Link>
                   <Link
-                    href={`/creator/analytics/${item.id}`}
+                    href={`/creator/analytics/${item.slug || item.id}`}
                     className="flex-1 flex items-center justify-center space-x-1 py-2 px-3 rounded-lg text-sm transition-colors"
                     style={{ backgroundColor: 'var(--color-backgroundSecondary)', color: 'var(--color-textPrimary)' }}
                   >
@@ -470,11 +486,11 @@ export default function CreatorContentPage() {
                 <div className="flex items-center space-x-2">
                   <Link
                     href={
-                      item.type === 'PODCAST' ? `/creator/podcast/${item.id}` :
-                      item.type === 'STORY' ? `/creator/story/${item.id}` :
-                      item.type === 'BOOK' ? `/creator/books/${item.id}` :
-                      item.type === 'ARTICLE' ? `/creator/articles/${item.id}` :
-                      `/creator/content/${item.id}`
+                      item.type === 'PODCAST' ? `/creator/podcast/${item.slug || item.id}` :
+                      item.type === 'STORY' ? `/creator/story/${item.slug || item.id}` :
+                      item.type === 'BOOK' ? `/creator/books/${item.slug || item.id}` :
+                      item.type === 'ARTICLE' ? `/creator/articles/${item.slug || item.id}` :
+                      `/creator/content/${item.slug || item.id}`
                     }
                     className="p-2 rounded-lg transition-colors text-gray-500 hover:bg-gray-500/10"
                     title="View"
@@ -483,11 +499,11 @@ export default function CreatorContentPage() {
                   </Link>
                   <Link
                     href={
-                      item.type === 'PODCAST' ? `/creator/podcast/edit/${item.id}` :
-                      item.type === 'STORY' ? `/creator/story/edit/${item.id}` :
-                      item.type === 'BOOK' ? `/creator/books/edit/${item.id}` :
-                      item.type === 'ARTICLE' ? `/creator/articles/edit/${item.id}` :
-                      `/creator/edit/${item.id}`
+                      item.type === 'PODCAST' ? `/creator/podcast/edit/${item.slug || item.id}` :
+                      item.type === 'STORY' ? `/creator/story/edit/${item.slug || item.id}` :
+                      item.type === 'BOOK' ? `/creator/books/edit/${item.slug || item.id}` :
+                      item.type === 'ARTICLE' ? `/creator/articles/edit/${item.slug || item.id}` :
+                      `/creator/edit/${item.slug || item.id}`
                     }
                     className="p-2 rounded-lg transition-colors text-blue-500 hover:bg-blue-500/10"
                     title="Edit"
@@ -495,7 +511,7 @@ export default function CreatorContentPage() {
                     <Edit size={16} />
                   </Link>
                   <Link
-                    href={`/creator/analytics/${item.id}`}
+                    href={`/creator/analytics/${item.slug || item.id}`}
                     className="p-2 rounded-lg transition-colors text-purple-500 hover:bg-purple-500/10"
                     title="Analytics"
                   >

@@ -25,6 +25,7 @@ interface RelatedContentItem {
   status: string;
   chapterNumber: number | null;
   coverImage: string | null;
+  slug?: string | null;
 }
 
 interface ContentData {
@@ -44,8 +45,8 @@ interface ContentData {
   };
   tags: { name: string }[];
   series: { id: string; title: string } | null;
-  gallery: { id: string; title: string; createdAt: string; images: { url: string }[] } | null;
-  linkedPodcast: { id: string; title: string; createdAt: string; coverImage: string | null; } | null;
+  gallery: { id: string; title: string; createdAt: string; images: { url: string }[]; slug?: string | null } | null;
+  linkedPodcast: { id: string; title: string; createdAt: string; coverImage: string | null; slug?: string | null } | null;
   _count: {
     likes: number;
     comments: number;
@@ -208,7 +209,7 @@ export default function BookViewPage({ params }: { params: { id: string } }) {
             <ul className="space-y-4">
               {content.relatedContent.map(item => (
                 <li key={item.id}>
-                  <Link href={item.type === 'BOOK' ? `/creator/books/${item.id}` : `/creator/content/${item.id}`} className="flex items-center space-x-3 group">
+                  <Link href={item.type === 'BOOK' ? `/creator/books/${item.slug || item.id}` : `/creator/content/${item.slug || item.id}`} className="flex items-center space-x-3 group">
                     <div className="flex-shrink-0">
                       <Image
                         src={item.coverImage || '/images/placeholder.png'}
@@ -254,7 +255,7 @@ export default function BookViewPage({ params }: { params: { id: string } }) {
               <div className="flex-1 min-w-0">
                 <p className="font-semibold truncate" style={{ color: 'var(--color-textPrimary)' }}>{content.linkedPodcast.title}</p>
                 <p className="text-xs mt-1" style={{ color: 'var(--color-textSecondary)' }}>Created: {formatSimpleDate(content.linkedPodcast.createdAt)}</p>
-                <Link href={`/creator/podcast/${content.linkedPodcast.id}`} className="inline-block mt-2 px-3 py-1 text-xs rounded-lg whitespace-nowrap" style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}>
+                <Link href={`/creator/podcast/${content.linkedPodcast.slug || content.linkedPodcast.id}`} className="inline-block mt-2 px-3 py-1 text-xs rounded-lg whitespace-nowrap" style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}>
                   View
                 </Link>
               </div>
@@ -282,7 +283,7 @@ export default function BookViewPage({ params }: { params: { id: string } }) {
               <div className="flex-1 min-w-0">
                 <p className="font-semibold truncate" style={{ color: 'var(--color-textPrimary)' }}>{content.gallery.title}</p>
                 <p className="text-xs mt-1" style={{ color: 'var(--color-textSecondary)' }}>Created: {formatSimpleDate(content.gallery.createdAt)}</p>
-                <Link href={`/creator/gallery/${content.gallery.id}`} className="inline-block mt-2 px-3 py-1 text-xs rounded-lg whitespace-nowrap" style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}>
+                <Link href={`/creator/galleries/${content.gallery.slug || content.gallery.id}`} className="inline-block mt-2 px-3 py-1 text-xs rounded-lg whitespace-nowrap" style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}>
                   View Gallery
                 </Link>
               </div>

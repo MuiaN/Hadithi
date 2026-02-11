@@ -38,6 +38,7 @@ export interface Gallery {
   tags: string[];
   viewCount: number;
   subscriptionTier: 'BRONZE' | 'SILVER' | 'GOLD' | null;
+  slug?: string | null;
 }
 
 export default function CreatorGalleriesPage() {
@@ -770,7 +771,7 @@ export default function CreatorGalleriesPage() {
                     <div className="absolute top-2 right-2">
                       <button
                         onClick={() => handleDeleteClick(gallery.id)}
-                        className="p-2 rounded-full bg-white/20 text-white backdrop-blur-sm hover:bg-red-500/50 transition-colors"
+                        className="p-2 rounded-full bg-white border border-red-500 text-red-500 shadow-sm hover:bg-red-500 hover:text-white transition-colors"
                         title="Delete"
                       >
                         <Trash2 size={16} />
@@ -798,7 +799,7 @@ export default function CreatorGalleriesPage() {
 
                     <div className="grid grid-cols-3 gap-2">
                       <Link
-                        href={`/creator/galleries/${gallery.id}`}
+                        href={`/creator/galleries/${gallery.slug || gallery.id}`}
                         className="col-span-1 flex items-center justify-center space-x-1 py-2 px-3 rounded-lg text-sm transition-colors"
                         style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}
                       >
@@ -815,7 +816,7 @@ export default function CreatorGalleriesPage() {
                         <span className="hidden sm:inline">Edit</span>
                       </Button>
                       <Link
-                        href={`/creator/analytics/${gallery.id}`}
+                        href={`/creator/analytics/${gallery.slug || gallery.id}`}
                         className="col-span-1 flex items-center justify-center space-x-1 py-2 px-3 rounded-lg text-sm transition-colors"
                         style={{ backgroundColor: 'var(--color-backgroundSecondary)', color: 'var(--color-textPrimary)' }}
                       >
@@ -874,7 +875,7 @@ export default function CreatorGalleriesPage() {
 
                     <div className="flex items-center space-x-2 ml-4">
                       <Link
-                        href={`/creator/galleries/${gallery.id}`}
+                        href={`/creator/galleries/${gallery.slug || gallery.id}`}
                         className="p-2 rounded-lg transition-colors text-gray-500 hover:bg-gray-500/10"
                         title="View"
                       >
@@ -890,7 +891,7 @@ export default function CreatorGalleriesPage() {
                         <Edit size={16} />
                       </Button>
                       <Link
-                        href={`/creator/analytics/${gallery.id}`}
+                        href={`/creator/analytics/${gallery.slug || gallery.id}`}
                         className="p-2 rounded-lg transition-colors text-purple-500 hover:bg-purple-500/10"
                         title="Analytics"
                       >

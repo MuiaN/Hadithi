@@ -59,6 +59,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ message: 'An internal server error occurred' }, { status: 500 });
   }
 }
+
+function generateSlug(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)+/g, '');
+}
+
 export async function POST(req: NextRequest) {
   const user = await getAuth(req);
   if (!user || user.role !== 'CREATOR') {
@@ -91,6 +99,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ message: 'At least one image is required' }, { status: 400 });
   }
 
+  // Generate unique slug
+  let slug = generateSlug(title);
+  let counter = 1;
+  while (await prisma.gallery.findUnique({ where: { slug } })) {
+    slug = `${generateSlug(title)}-${counter}`;
+    counter++;
+  }
+
   try {
     const savedImagesData = [];
     for (let i = 0; i < images.length; i++) {
@@ -114,6 +130,7 @@ export async function POST(req: NextRequest) {
       data: {
         title,
         description: description || '',
+        slug,
         authorId: user.id,
         status: status || ContentStatus.DRAFT,
         isPublished: status === ContentStatus.PUBLISHED,

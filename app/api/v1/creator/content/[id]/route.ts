@@ -119,26 +119,30 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     // Fetch the main content item
     const contentItem = await prisma.content.findFirst({
       where: {
-        id: params.id,
+        OR: [
+          { id: params.id },
+          { slug: params.id }
+        ],
         authorId: user.id,
       },
       include: {
         author: { select: { name: true, avatar: true } },
         series: { select: { id: true, title: true } },
         tags: { select: { name: true } }, // Assuming gallery has a coverImage field to select
-        linkedPodcast: { select: { id: true, title: true, createdAt: true, coverImage: true } },
+        linkedPodcast: { select: { id: true, title: true, createdAt: true, coverImage: true, slug: true } },
         gallery: { 
           select: { 
             id: true, 
             title: true, 
             createdAt: true,
+            slug: true,
             images: {
               select: { url: true },
               take: 1
             }
           } 
         },
-        linkedFromContent: { select: { id: true, title: true } },
+        linkedFromContent: { select: { id: true, title: true, slug: true } },
         _count: { select: { likes: true, comments: true } },
       },
     });
@@ -153,7 +157,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       relatedContent = await prisma.content.findMany({
         where: {
           seriesId: contentItem.seriesId,
-          id: { not: params.id }, // Exclude the current item
+          id: { not: contentItem.id }, // Exclude the current item
           authorId: user.id,
         },
         select: {
@@ -163,6 +167,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
           status: true,
           chapterNumber: true,
           coverImage: true,
+          slug: true,
         },
         orderBy: { chapterNumber: 'asc' },
       });
@@ -220,8 +225,13 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
   }
 
-  const contentItem = await prisma.content.findUnique({
-    where: { id: params.id },
+  const contentItem = await prisma.content.findFirst({
+    where: {
+      OR: [
+        { id: params.id },
+        { slug: params.id }
+      ]
+    },
   });
 
   if (!contentItem || contentItem.authorId !== user.id) {
@@ -379,8 +389,13 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
   }
 
-  const contentItem = await prisma.content.findUnique({
-    where: { id: params.id },
+  const contentItem = await prisma.content.findFirst({
+    where: {
+      OR: [
+        { id: params.id },
+        { slug: params.id }
+      ]
+    },
   });
 
   if (!contentItem || contentItem.authorId !== user.id) {
@@ -394,7 +409,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
 
     // Hard delete from database
     await prisma.content.delete({
-      where: { id: params.id },
+      where: { id: contentItem.id },
     });
     return new NextResponse(null, { status: 204 });
   } catch (error) {

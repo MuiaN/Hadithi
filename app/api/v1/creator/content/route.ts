@@ -128,6 +128,13 @@ async function saveFile(file: File, subfolder: string): Promise<string | null> {
   return `/media/${subfolder}/${filename}`;
 }
 
+function generateSlug(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)+/g, '');
+}
+
 /**
  * @swagger
  * /api/v1/creator/content:
@@ -213,6 +220,14 @@ export async function POST(req: NextRequest) {
     audioFileUrl = audioFileEntry;
   }
 
+  // Generate unique slug
+  let slug = generateSlug(validatedData.title);
+  let counter = 1;
+  while (await prisma.content.findUnique({ where: { slug } })) {
+    slug = `${generateSlug(validatedData.title)}-${counter}`;
+    counter++;
+  }
+
   try {
     // Construct the data object for Prisma explicitly
     const prismaData: Prisma.ContentCreateInput = {
@@ -226,6 +241,7 @@ export async function POST(req: NextRequest) {
       duration: validatedData.duration,
       status: validatedData.status || ContentStatus.DRAFT,
       chapterNumber: validatedData.chapterNumber,
+      slug: slug,
       
       // Connect relations
       author: { connect: { id: user.id } },

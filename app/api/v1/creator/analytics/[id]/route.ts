@@ -12,8 +12,14 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
   try {
     // 1. Try to find content
-    const content = await prisma.content.findUnique({
-      where: { id, authorId: user.id },
+    const content = await prisma.content.findFirst({
+      where: {
+        OR: [
+          { id },
+          { slug: id }
+        ],
+        authorId: user.id 
+      },
       include: {
         _count: {
           select: { likes: true, comments: true }
@@ -44,8 +50,14 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     }
 
     // 2. Try to find gallery
-    const gallery = await prisma.gallery.findUnique({
-      where: { id, authorId: user.id },
+    const gallery = await prisma.gallery.findFirst({
+      where: {
+        OR: [
+          { id },
+          { slug: id }
+        ],
+        authorId: user.id 
+      },
     });
 
     if (gallery) {
