@@ -49,5 +49,70 @@ To address Vercel serverless function payload limits (4.5MB) and improve databas
 *   **Routing:** Configured navigation paths to link specific content IDs to their respective analytics views.
 *   **Storage:** Implemented `fs/promises` based file handling for local media storage and cleanup.
 
+### New Updates - February
+
+### 6. URL Slugs & SEO
+*   **Friendly URLs:** Replaced internal IDs with human-readable slugs (e.g., `/creator/story/my-story-title`) in browser URLs for Stories, Articles, Books, Podcasts, and Galleries.
+*   **Database Update:** Added unique `slug` fields to `Content` and `Gallery` models.
+*   **API Logic:** Updated backend resolvers to lookup resources by either ID or Slug, ensuring backward compatibility while prioritizing slugs for new navigation.
+
+### 7. Content Editing Parity
+*   **Unified Experience:** Standardized the creation and editing interfaces pages across all content types.
+*   **Feature Propagation:**
+    *   Added "Series Information" management to Articles.
+    *   Added "Link Content" (Gallery/Podcast attachment) and "Tags & Settings" sections to Story, Article, and Book editors, ensuring feature parity with the creation flow.
+
+### 8. UI Refinements
+*   **Visual Hierarchy:**
+    *   **Delete Actions:** Redesigned delete buttons in grid views with red borders and icons for clearer intent and visibility.
+    *   **Type Badges:** Implemented color-coded badges for content types (Story: Blue, Article: Green, Book: Purple, Podcast: Orange) in dashboard grid views.
+*   **Sidebar Fixes:** Corrected z-index stacking context issues to ensure sidebar tooltips appear above dashboard content cards.
+
+### 9. Rich Text Editor & Media Handling Upgrade
+*   **Advanced Formatting:**
+    *   **Lists & Indentation:** Implemented fully functional ordered/unordered lists and paragraph indentation (Microsoft Word-style) using a custom Tiptap extension.
+    *   **Typography:** Added controls for font family (Inter, Arial, Georgia, etc.), font size, and text alignment (Left, Center, Right, Justify).
+    *   **Links:** Added support for creating and editing hyperlinks within the content.
+*   **Integrated Image Management:**
+    *   **Direct Uploads:** Users can now upload images directly within the text editor.
+    *   **Structured Storage:** Images uploaded via the editor are automatically organized into folders named after the content title (e.g., `public/media/images/{content-title}/`), ensuring better file management.
+    *   **Rendering:** Configured images to render as responsive block elements with rounded corners.
+*   **Backend Integration:**
+    *   **Upload API:** Created a dedicated API route (`/api/v1/creator/upload/image`) to handle editor uploads, supporting both local filesystem and Vercel Blob storage.
+    *   **Cleanup Logic:** Updated the content deletion process to automatically remove the specific image folder associated with a piece of content when it is deleted, preventing storage clutter.
+
+### 10. User Experience & Interface Consistency
+*   **View Page Standardization:**
+    *   **Unified Layout:** Updated Article, Book, and Podcast view pages to align with the Story view page design. This includes a standardized metadata row (author, date, views, reading time) and consistent cover image presentation.
+    *   **Typography:** Applied consistent typography and dark mode support (`dark:prose-invert`) across all content view pages.
+*   **Edit Page Enhancements:**
+    *   **URL Slugs:** Implemented logic to automatically update the browser URL to use the content slug instead of the ID when editing Stories, Articles, Books, and Podcasts, improving URL readability.
+    *   **Input Validation:** Enforced a 250-character limit on description fields across all content creation and editing forms (including Galleries), complete with a real-time character counter to guide users.
+*   **Rich Text Editor Refinements:**
+    *   **Image Rendering:** Fixed HTML serialization for images to ensure attributes like width and alignment are correctly preserved and rendered on view pages.
+    *   **Bulk Uploads:** Enabled multiple file selection for image uploads within the editor, utilizing client-side uploads to Vercel Blob to bypass serverless payload limits and improve performance.
+
+### 11. Infrastructure & Framework Updates
+*   **Next.js 16 Compatibility:**
+    *   **Middleware Migration:** Successfully migrated from the deprecated `middleware.ts` convention to `proxy.ts` as required by Next.js 16. This change clarifies the purpose of the request interception layer and ensures long-term stability.
+    *   **Edge Runtime Optimization:** Refactored JWT verification within the proxy to use dynamic imports for the `jose` library, resolving module resolution conflicts and ensuring reliable authentication checks in the Edge environment.
+
+### 12. Article Enhancements
+*   **Citations & References:** Added a dedicated field for citations in Articles. Implemented a specialized Rich Text Editor instance for this field that supports text formatting and links but restricts image uploads, ensuring academic/reference integrity.
+*   **View Page Integration:** Citations are now displayed in a distinct section at the bottom of the article view.
+
+### 13. Book Content Structure & Reading Experience
+*   **Hierarchical Chapters:** Implemented a robust chapter management system allowing for nested structures (Chapters and Sub-chapters).
+*   **Chapter Manager:** Created a recursive `ChapterManager` component for the creation and editing interfaces, enabling authors to easily add, edit, and reorder chapters and sub-chapters.
+*   **Interactive Reading Mode:** Completely redesigned the Book View page.
+    *   **Table of Contents:** Added an interactive sidebar (within the main content area) that allows readers to navigate between the Introduction and specific chapters.
+    *   **Accordion Navigation:** The Table of Contents features accordion-style expansion for sub-chapters, improving usability for complex books.
+    *   **Contextual Headers:** Reading view now clearly displays "Chapter X" or "Sub-chapter X.Y" badges to orient the reader.
+*   **Unified Layout:** Aligned the Book View page's sidebar (Series, Linked Content) with the design standards established for Articles and Stories.
+
+### 14. Navigation & Routing Improvements
+*   **Type-Safe Routing:** Refactored all "Related Content" and "Linked Content" components across Story, Article, Book, and Podcast view pages to generate specific URLs based on content type (e.g., `/creator/books/slug` instead of generic `/creator/content/slug`), fixing navigation issues.
+*   **Slug Integration:** Completed the transition to slug-based routing for all view and edit actions in the sidebar and related content lists.
+
 ---
 *Report generated for Project Manager review.*

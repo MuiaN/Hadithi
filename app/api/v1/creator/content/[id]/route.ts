@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getAuth } from '@/lib/auth';
 import { z } from 'zod';
-import { ContentType, ContentStatus, SubscriptionTier } from '@prisma/client';
-import { writeFile, mkdir, unlink } from 'fs/promises';
-import path from 'path';
+import { ContentType, ContentStatus, SubscriptionTier, Prisma } from '@prisma/client';
+import { writeFile, mkdir, unlink, rm } from 'fs/promises';
 import { put, del } from '@vercel/blob';
+import path from 'path';
 
 const updateContentSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -24,6 +24,9 @@ const updateContentSchema = z.object({
   seriesId: z.string().cuid().optional().nullable(),
   chapterNumber: z.number().int().positive().optional().nullable(),
   linkedPodcastId: z.string().cuid().optional().nullable(),
+  youtubeUrls: z.array(z.string().url()).optional(),
+  citations: z.string().optional().nullable(),
+  chapters: z.any().optional(),
 }).partial(); // Use partial for updates
 
 type RelatedContent = {
@@ -109,7 +112,8 @@ async function deleteFile(fileUrl: string | null) {
  *       500:
  *         description: Internal server error.
  */
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const user = await getAuth(req);
   if (!user || user.role !== 'CREATOR') {
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
@@ -142,7 +146,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
             }
           } 
         },
-        linkedFromContent: { select: { id: true, title: true, slug: true } },
+        linkedFromContent: { select: { id: true, title: true, slug: true, type: true } },
         _count: { select: { likes: true, comments: true } },
       },
     });
@@ -219,7 +223,8 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
  *       500:
  *         description: Internal server error.
  */
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const user = await getAuth(req);
   if (!user || user.role !== 'CREATOR') {
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
@@ -261,6 +266,9 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       galleryId: formData.get('galleryId') === 'null' ? null : formData.get('galleryId'),
       linkedPodcastId: formData.get('linkedPodcastId') === 'null' ? null : formData.get('linkedPodcastId'),
       tags: formData.getAll('tags').map(t => t.toString()),
+      youtubeUrls: formData.getAll('youtubeUrls').map(t => t.toString()),
+      citations: formData.get('citations'),
+      chapters: formData.get('chapters') ? JSON.parse(formData.get('chapters') as string) : undefined,
     };
     coverImageEntry = formData.get('coverImage');
     audioFileEntry = formData.get('audioFile');
@@ -331,7 +339,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
     }
 
     const updatedContent = await prisma.content.update({
-      where: { id: params.id },
+      where: { id: contentItem.id },
       data: {
         ...updateData,
         ...statusReset,
@@ -343,6 +351,7 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
         ...(tags && { tags: tagOperations }),
         ...(updateData.status === ContentStatus.PUBLISHED && !contentItem.publishedAt && { publishedAt: new Date().toISOString() }),
         ...(updateData.status && updateData.status !== ContentStatus.PUBLISHED && contentItem.publishedAt && { publishedAt: null }),
+        ...(updateData.chapters !== undefined && { chapters: updateData.chapters ?? Prisma.JsonNull }),
       },
       include: { 
         series: { select: { title: true } },
@@ -383,7 +392,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
  *       500:
  *         description: Internal server error.
  */
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const user = await getAuth(req);
   if (!user || user.role !== 'CREATOR') {
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
@@ -406,6 +416,15 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     // Delete associated media files
     await deleteFile(contentItem.coverImage);
     await deleteFile(contentItem.audioFile);
+
+    // Delete content folder if it exists (Local)
+    const sanitizedTitle = contentItem.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    const contentDir = path.join(process.cwd(), 'public', 'media', 'images', sanitizedTitle);
+    try {
+        await rm(contentDir, { recursive: true, force: true });
+    } catch (e) {
+        // ignore if folder doesn't exist
+    }
 
     // Hard delete from database
     await prisma.content.delete({

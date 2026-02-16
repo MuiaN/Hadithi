@@ -135,6 +135,9 @@ model Content {
   likes        Like[]
   views        Int       @default(0)
   readingHistory ReadingHistory[]
+  youtubeUrls  String[]  @default([])
+  citations    String?   @db.Text
+  chapters     Json?
 }
 
 model Tag {

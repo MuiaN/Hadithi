@@ -1,9 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { jwtVerify, JWTPayload } from 'jose';
- 
-// Use dynamic import for jose to avoid module issues
-const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET);
+import type { JWTPayload } from 'jose';
 
 interface UserJwtPayload extends JWTPayload {
   sub: string;
@@ -14,7 +11,7 @@ interface UserJwtPayload extends JWTPayload {
 
 const AUTH_LOGIN_URL = '/auth/login';
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get('auth_token')?.value;
 
@@ -35,7 +32,10 @@ export async function middleware(request: NextRequest) {
     }
 
     try {
-      // jwtVerify is now imported at the top
+      // Use dynamic import for jose to avoid module issues
+      const { jwtVerify } = await import('jose');
+      const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET || '');
+
       const { payload } = await jwtVerify(token, JWT_SECRET, {
         algorithms: ['HS256'],
       });

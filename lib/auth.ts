@@ -46,6 +46,11 @@ export const getAuth = async (request: NextRequest): Promise<User | null> => {
 
   try {
     const { payload } = await jwtVerify(token, secretKey);
+
+    if (!payload || !payload.sub) {
+      return null;
+    }
+
     const user = await prisma.user.findUnique({ where: { id: payload.sub as string } });
     return user || null;
   } catch (error) {

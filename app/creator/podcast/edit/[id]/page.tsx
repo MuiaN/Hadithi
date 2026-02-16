@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { 
   Save, 
   Upload, 
@@ -37,8 +37,9 @@ interface FormDataState {
   chapterNumber: number | null;
 }
 
-export default function EditPodcastPage({ params }: { params: { id: string } }) {
-  const { id } = params;
+export default function EditPodcastPage() {
+  const params = useParams();
+  const id = params.id as string;
   const cleanId = id.replace(/\/$/, '');
 
   const [formData, setFormData] = useState<FormDataState>({
@@ -95,6 +96,10 @@ export default function EditPodcastPage({ params }: { params: { id: string } }) 
           throw new Error('This content is not a podcast.');
         }
 
+        if (podcastData.slug && podcastData.slug !== cleanId) {
+          window.history.replaceState(null, '', `/creator/podcast/edit/${podcastData.slug}`);
+        }
+
         setFormData({
           ...podcastData,
           tags: podcastData.tags.map((t: { name: string }) => t.name),
@@ -129,7 +134,7 @@ export default function EditPodcastPage({ params }: { params: { id: string } }) 
     data.append('description', formData.description);
     data.append('content', formData.content);
     data.append('isFree', String(formData.isFree));
-    if (formData.subscriptionTier) data.append('subscriptionTier', formData.subscriptionTier);
+    if (formData.subscriptionTier) data.append('subscriptionTier', formData.subscriptionTier.toUpperCase());
     if (formData.duration) data.append('duration', formData.duration);
     if (formData.seriesId) data.append('seriesId', formData.seriesId);
     if (formData.chapterNumber) data.append('chapterNumber', String(formData.chapterNumber));
@@ -278,7 +283,10 @@ export default function EditPodcastPage({ params }: { params: { id: string } }) 
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Description</label>
-                <textarea name="description" required rows={3} value={formData.description} onChange={handleChange} className="w-full px-4 py-3 rounded-lg border" style={{ backgroundColor: 'var(--color-input)', borderColor: 'var(--color-inputBorder)', color: 'var(--color-textPrimary)' }} placeholder="A brief summary of the episode..." />
+                <textarea name="description" required rows={3} maxLength={250} value={formData.description} onChange={handleChange} className="w-full px-4 py-3 rounded-lg border" style={{ backgroundColor: 'var(--color-input)', borderColor: 'var(--color-inputBorder)', color: 'var(--color-textPrimary)' }} placeholder="A brief summary of the episode..." />
+                <div className="text-right text-xs mt-1" style={{ color: 'var(--color-textSecondary)' }}>
+                  {250 - (formData.description?.length || 0)} characters remaining
+                </div>
               </div>
             </div>
           </div>
@@ -316,7 +324,7 @@ export default function EditPodcastPage({ params }: { params: { id: string } }) 
           {/* Show Notes */}
           <div className="p-6 rounded-lg" style={{ backgroundColor: 'var(--color-card)', border: '1px solid var(--color-border)' }}>
             <h2 className="text-xl font-semibold mb-6">Show Notes</h2>
-            <RichTextEditor value={formData.content} onChange={(value) => setFormData(prev => ({ ...prev, content: value }))} />
+            <RichTextEditor value={formData.content} onChange={(value) => setFormData(prev => ({ ...prev, content: value }))} folderName={formData.title} />
           </div>
 
           {/* Tags and Settings */}

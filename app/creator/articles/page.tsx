@@ -10,7 +10,9 @@ import {
   Plus,
   Send,
   Image as ImageIcon,
-  Link2
+  Link2,
+  Youtube,
+  Trash2
 } from 'lucide-react';
 import useStore from '@/lib/store/useStore';
 import Image from 'next/image';
@@ -31,14 +33,16 @@ export default function NewArticlePage() {
     tags: [] as string[],
     coverImage: '',
     isFree: true,
-    subscriptionTier: null,
+    subscriptionTier: null as string | null,
     rejectionReason: null,
     seriesId: null,
     chapterNumber: null as number | null,
     galleryId: null,
     linkedPodcastId: null,
+    citations: '',
   });
   const [newTag, setNewTag] = useState('');
+  const [youtubeUrls, setYoutubeUrls] = useState<string[]>(['']);
   const [seriesList, setSeriesList] = useState<{ id: string; title: string }[]>([]);
   const [showNewSeriesInput, setShowNewSeriesInput] = useState(false);
   const [newSeriesTitle, setNewSeriesTitle] = useState('');
@@ -69,17 +73,19 @@ export default function NewArticlePage() {
     data.append('title', formData.title);
     data.append('description', formData.description);
     data.append('content', formData.content);
+    data.append('citations', formData.citations);
     data.append('type', formData.type.toUpperCase());
     data.append('status', status);
     data.append('isFree', String(formData.isFree));
     
-    if (formData.subscriptionTier) data.append('subscriptionTier', formData.subscriptionTier);
+    if (formData.subscriptionTier) data.append('subscriptionTier', formData.subscriptionTier.toUpperCase());
     if (formData.seriesId) data.append('seriesId', formData.seriesId);
     if (formData.chapterNumber) data.append('chapterNumber', String(formData.chapterNumber));
     if (formData.galleryId) data.append('galleryId', formData.galleryId);
     if (formData.linkedPodcastId) data.append('linkedPodcastId', formData.linkedPodcastId);
     
     formData.tags.forEach(tag => data.append('tags', tag));
+    youtubeUrls.filter(url => url.trim() !== '').forEach(url => data.append('youtubeUrls', url));
 
     if (coverImageFile) {
       const coverImageName = `media/images/${Date.now()}-${coverImageFile.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
@@ -95,10 +101,14 @@ export default function NewArticlePage() {
         method: 'POST',
         body: data,
       });
-      if (!res.ok) throw new Error('Failed to create content');
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || (errorData.errors ? Object.values(errorData.errors).flat().join(', ') : 'Failed to create content'));
+      }
       router.push('/creator');
     } catch (error) {
       console.error('Error creating content:', error);
+      toast({ title: 'Error', description: (error as Error).message, variant: 'destructive' });
     } finally {
       setSaving(false);
     }
@@ -189,6 +199,21 @@ export default function NewArticlePage() {
     }));
   };
 
+  const handleYoutubeUrlChange = (index: number, value: string) => {
+    const newUrls = [...youtubeUrls];
+    newUrls[index] = value;
+    setYoutubeUrls(newUrls);
+  };
+
+  const addYoutubeUrl = () => {
+    setYoutubeUrls([...youtubeUrls, '']);
+  };
+
+  const removeYoutubeUrl = (index: number) => {
+    const newUrls = youtubeUrls.filter((_, i) => i !== index);
+    setYoutubeUrls(newUrls.length ? newUrls : ['']);
+  };
+
   return (
     <div className="p-8" style={{ backgroundColor: 'var(--color-background)' }}>
       <div className="max-w-4xl mx-auto">
@@ -238,6 +263,7 @@ export default function NewArticlePage() {
                   name="description"
                   required
                   rows={3}
+                  maxLength={250}
                   value={formData.description}
                   onChange={handleChange}
                   className="w-full px-4 py-3 rounded-lg border"
@@ -248,6 +274,9 @@ export default function NewArticlePage() {
                   }}
                   placeholder="Provide a brief description..."
                 />
+                <div className="text-right text-xs mt-1" style={{ color: 'var(--color-textSecondary)' }}>
+                  {250 - (formData.description?.length || 0)} characters remaining
+                </div>
               </div>
             </div>
 
@@ -396,8 +425,63 @@ export default function NewArticlePage() {
                 <RichTextEditor
                   value={formData.content}
                   onChange={(value) => setFormData(prev => ({ ...prev, content: value }))}
+                  folderName={formData.title}
                 />
               </div>
+
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-textPrimary)' }}>
+                  Citations & References
+                </label>
+                <RichTextEditor
+                  value={formData.citations}
+                  onChange={(value) => setFormData(prev => ({ ...prev, citations: value }))}
+                  disableImages={true}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* YouTube Links */}
+          <div className="p-6 rounded-lg" style={{ backgroundColor: 'var(--color-card)', border: '1px solid var(--color-border)' }}>
+            <h2 className="text-xl font-semibold mb-6 flex items-center space-x-2" style={{ color: 'var(--color-textPrimary)' }}>
+              <Youtube size={20} />
+              <span>YouTube Videos</span>
+            </h2>
+            <div className="space-y-4">
+              {youtubeUrls.map((url, index) => (
+                <div key={index} className="flex items-center space-x-2">
+                  <input
+                    type="url"
+                    value={url}
+                    onChange={(e) => handleYoutubeUrlChange(index, e.target.value)}
+                    className="flex-1 px-4 py-2 rounded-lg border"
+                    style={{
+                      backgroundColor: 'var(--color-input)',
+                      borderColor: 'var(--color-inputBorder)',
+                      color: 'var(--color-textPrimary)'
+                    }}
+                    placeholder="https://www.youtube.com/watch?v=..."
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeYoutubeUrl(index)}
+                    className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                    title="Remove link"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={addYoutubeUrl}
+                className="flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors"
+                style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}
+              >
+                <Plus size={16} />
+                <span>Add another video</span>
+              </button>
             </div>
           </div>
 

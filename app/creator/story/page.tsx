@@ -32,7 +32,7 @@ export default function NewStoryPage() {
     tags: [] as string[],
     coverImage: '',
     isFree: true,
-    subscriptionTier: null,
+    subscriptionTier: null as string | null,
     rejectionReason: null,
     seriesId: null,
     chapterNumber: null as number | null,
@@ -74,7 +74,7 @@ export default function NewStoryPage() {
     data.append('status', status);
     data.append('isFree', String(formData.isFree));
     
-    if (formData.subscriptionTier) data.append('subscriptionTier', formData.subscriptionTier);
+    if (formData.subscriptionTier) data.append('subscriptionTier', formData.subscriptionTier.toUpperCase());
     if (formData.seriesId) data.append('seriesId', formData.seriesId);
     if (formData.chapterNumber) data.append('chapterNumber', String(formData.chapterNumber));
     if (formData.galleryId) data.append('galleryId', formData.galleryId);
@@ -239,6 +239,7 @@ export default function NewStoryPage() {
                   name="description"
                   required
                   rows={3}
+                  maxLength={250}
                   value={formData.description}
                   onChange={handleChange}
                   className="w-full px-4 py-3 rounded-lg border"
@@ -249,6 +250,9 @@ export default function NewStoryPage() {
                   }}
                   placeholder="Provide a brief description..."
                 />
+                <div className="text-right text-xs mt-1" style={{ color: 'var(--color-textSecondary)' }}>
+                  {250 - (formData.description?.length || 0)} characters remaining
+                </div>
               </div>
             </div>
 
@@ -397,6 +401,7 @@ export default function NewStoryPage() {
                 <RichTextEditor
                   value={formData.content}
                   onChange={(value) => setFormData(prev => ({ ...prev, content: value }))}
+                  folderName={formData.title}
                 />
               </div>
             </div>

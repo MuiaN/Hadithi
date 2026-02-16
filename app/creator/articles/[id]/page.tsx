@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, useParams } from 'next/navigation';
 import { 
   User, 
   Clock, 
@@ -15,7 +15,8 @@ import {
   Edit,
   Music,
   Book,
-  Image as ImageIcon
+  Image as ImageIcon,
+  Youtube
 } from 'lucide-react';
 
 interface RelatedContentItem {
@@ -54,16 +55,21 @@ interface ContentData {
   views: number;
   type: 'STORY' | 'ARTICLE' | 'BOOK' | 'PODCAST';
   relatedContent: RelatedContentItem[];
+  slug?: string | null;
+  youtubeUrls: string[];
+  citations: string | null;
 }
 
-export default function ArticleViewPage({ params }: { params: { id: string } }) {
+export default function ArticleViewPage() {
+  const params = useParams();
+  const id = params.id as string;
   const [content, setContent] = useState<ContentData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchContent = async () => {
       try {
-        const res = await fetch(`/api/v1/creator/content/${params.id}`);
+        const res = await fetch(`/api/v1/creator/content/${id}`);
         if (!res.ok) {
           if (res.status === 404) {
             notFound();
@@ -80,7 +86,7 @@ export default function ArticleViewPage({ params }: { params: { id: string } }) 
     };
 
     fetchContent();
-  }, [params.id]);
+  }, [id]);
 
   if (loading) {
     return <div className="flex justify-center items-center h-screen" style={{ backgroundColor: 'var(--color-background)' }}>Loading content...</div>;
@@ -108,71 +114,143 @@ export default function ArticleViewPage({ params }: { params: { id: string } }) 
     });
   };
 
+  const getYoutubeEmbedUrl = (url: string) => {
+    const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|&v=)([^#&?]*).*/;
+    const match = url.match(regExp);
+    return (match && match[2].length === 11) ? `https://www.youtube.com/embed/${match[2]}` : null;
+  };
+
+  const YoutubeVideo = ({ url }: { url: string }) => {
+    const [title, setTitle] = useState<string>('');
+    const embedUrl = getYoutubeEmbedUrl(url);
+
+    useEffect(() => {
+      const fetchInfo = async () => {
+        try {
+          const res = await fetch(`https://noembed.com/embed?url=${url}`);
+          const data = await res.json();
+          if (data.title) setTitle(data.title);
+        } catch (e) {
+          console.error('Failed to fetch youtube info', e);
+        }
+      };
+      fetchInfo();
+    }, [url]);
+
+    if (!embedUrl) return null;
+
+    return (
+      <div className="mb-8">
+        <div className="relative w-full pt-[56.25%] rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 mb-2">
+          <iframe
+            src={embedUrl}
+            className="absolute top-0 left-0 w-full h-full"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+            title={title || 'YouTube video'}
+          />
+        </div>
+        {title && <p className="text-sm font-medium" style={{ color: 'var(--color-textPrimary)' }}>{title}</p>}
+      </div>
+    );
+  };
+
   return (
     <main className="grid grid-cols-1 lg:grid-cols-12 gap-8 p-8" style={{ backgroundColor: 'var(--color-background)' }}>
       <article className="lg:col-span-8">
-        <header className="mb-8">
-          <h1 className="text-4xl md:text-5xl font-extrabold my-4 leading-tight" style={{ color: 'var(--color-textPrimary)' }}>
+        <header className="mb-6">
+          <h1 className="text-3xl md:text-4xl font-extrabold mb-4 leading-tight" style={{ color: 'var(--color-textPrimary)' }}>
             {content.title}
           </h1>
-          <p className="text-lg md:text-xl mt-2" style={{ color: 'var(--color-textSecondary)' }}>
+          <p className="text-lg md:text-xl mb-6" style={{ color: 'var(--color-textSecondary)' }}>
             {content.description}
           </p>
+
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm" style={{ color: 'var(--color-textSecondary)' }}>
+            <div className="flex items-center space-x-2">
+              <Image 
+                src={content.author.avatar || '/default-avatar.png'} 
+                alt={content.author.name} 
+                width={24} 
+                height={24} 
+                className="rounded-full"
+              />
+              <span className="font-medium" style={{ color: 'var(--color-textPrimary)' }}>{content.author.name}</span>
+            </div>
+            
+            <span className="text-gray-300 dark:text-gray-600">•</span>
+            
+            <span>
+              {content.publishedAt 
+                ? new Date(content.publishedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+                : new Date(content.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+              }
+            </span>
+
+            {content.readingTime && (
+              <>
+                <span className="text-gray-300 dark:text-gray-600">•</span>
+                <div className="flex items-center space-x-1">
+                  <Clock size={14} />
+                  <span>{content.readingTime}</span>
+                </div>
+              </>
+            )}
+
+            <span className="text-gray-300 dark:text-gray-600">•</span>
+            <div className="flex items-center space-x-1">
+              <Eye size={14} />
+              <span>{content.views} views</span>
+            </div>
+
+            {content.series && (
+              <>
+                <span className="text-gray-300 dark:text-gray-600">•</span>
+                <div className="flex items-center space-x-1 px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
+                  <Book size={14} />
+                  <span>Series: {content.series.title}</span>
+                </div>
+              </>
+            )}
+          </div>
         </header>
 
-        {content.series && (
-          <div className="mb-8 p-4 rounded-lg flex items-center space-x-4" style={{ backgroundColor: 'var(--color-card)', border: '1px solid var(--color-border)' }}>
-            <Book size={24} style={{ color: 'var(--color-primary)' }} className="flex-shrink-0" />
-            <div>
-              <span className="text-sm" style={{ color: 'var(--color-textSecondary)' }}>Part of the series</span>
-              <p className="font-semibold" style={{ color: 'var(--color-textPrimary)' }}>{content.series.title}</p>
-            </div>
-          </div>
-        )}
-
-        <div className="flex items-center justify-between mb-8 p-4 rounded-lg" style={{ backgroundColor: 'var(--color-card)', border: '1px solid var(--color-border)' }}>
-          <div className="flex items-center space-x-4">
-            <Image 
-              src={content.author.avatar || '/default-avatar.png'} 
-              alt={content.author.name} 
-              width={48} 
-              height={48} 
-              className="rounded-full"
-            />
-            <div>
-              <p className="font-semibold" style={{ color: 'var(--color-textPrimary)' }}>{content.author.name}</p>
-              <p className="text-sm" style={{ color: 'var(--color-textSecondary)' }}>
-                {content.publishedAt 
-                  ? `Published on ${new Date(content.publishedAt).toLocaleString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`
-                  : `Created on ${new Date(content.createdAt).toLocaleString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`
-                }
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center space-x-4 text-sm" style={{ color: 'var(--color-textSecondary)' }}>
-            {content.readingTime && <div className="flex items-center space-x-1"><Clock size={14} /><span>{content.readingTime}</span></div>}
-            <div className="flex items-center space-x-1"><Eye size={14} /><span>{content.views} views</span></div>
-          </div>
-        </div>
-
         {content.coverImage && (
-          <div className="mb-8 rounded-lg overflow-hidden shadow-lg">
-            <Image 
-              src={content.coverImage} 
-              alt={content.title} 
-              width={1200} 
-              height={600} 
-              className="w-full h-auto object-cover"
-              priority
-            />
+          <div className="mb-8 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+            <div className="relative w-full h-64 md:h-80 lg:h-96">
+              <Image 
+                src={content.coverImage} 
+                alt={content.title} 
+                fill
+                className="object-cover"
+                priority
+              />
+            </div>
           </div>
         )}
 
         <div 
-          className="prose lg:prose-xl max-w-none"
+          className="prose lg:prose-xl dark:prose-invert max-w-none [&_p]:min-h-[1em]"
           style={{ color: 'var(--color-textPrimary)' }}
           dangerouslySetInnerHTML={{ __html: content.content }}
         />
+
+        {content.youtubeUrls && content.youtubeUrls.length > 0 && (
+          <div className="mt-8">
+            {content.youtubeUrls.map((url, idx) => <YoutubeVideo key={idx} url={url} />)}
+          </div>
+        )}
+
+        {content.citations && (
+          <div className="mt-8 pt-8 border-t" style={{ borderColor: 'var(--color-border)' }}>
+            <h3 className="text-xl font-bold mb-4" style={{ color: 'var(--color-textPrimary)' }}>Citations & References</h3>
+            <div 
+              className="prose dark:prose-invert max-w-none text-sm [&_p]:min-h-[1em]"
+              style={{ color: 'var(--color-textSecondary)' }}
+              dangerouslySetInnerHTML={{ __html: content.citations }}
+            />
+          </div>
+        )}
 
         <footer className="mt-12 pt-8 border-t" style={{ borderColor: 'var(--color-border)' }}>
           {content.tags.length > 0 && (
@@ -191,7 +269,7 @@ export default function ArticleViewPage({ params }: { params: { id: string } }) 
               <div className="flex items-center space-x-2"><Heart /> <span>{content._count.likes} Likes</span></div>
               <div className="flex items-center space-x-2"><MessageCircle /> <span>{content._count.comments} Comments</span></div>
             </div>
-            <Link href={`/creator/articles/edit/${content.id}`} className="inline-flex items-center justify-center px-6 py-3 rounded-lg font-medium transition-colors" style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}>
+            <Link href={`/creator/articles/edit/${content.slug || content.id}`} className="inline-flex items-center justify-center px-6 py-3 rounded-lg font-medium transition-colors" style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}>
               <Edit className="mr-2 h-4 w-4" />
               Edit Article
             </Link>
@@ -209,7 +287,13 @@ export default function ArticleViewPage({ params }: { params: { id: string } }) 
             <ul className="space-y-4">
               {content.relatedContent.map(item => (
                 <li key={item.id}>
-                  <Link href={item.type === 'ARTICLE' ? `/creator/articles/${item.slug || item.id}` : `/creator/content/${item.slug || item.id}`} className="flex items-center space-x-3 group">
+                  <Link href={
+                    item.type === 'STORY' ? `/creator/story/${item.slug || item.id}` :
+                    item.type === 'ARTICLE' ? `/creator/articles/${item.slug || item.id}` :
+                    item.type === 'BOOK' ? `/creator/books/${item.slug || item.id}` :
+                    item.type === 'PODCAST' ? `/creator/podcast/${item.slug || item.id}` :
+                    '#'
+                  } className="flex items-center space-x-3 group">
                     <div className="flex-shrink-0">
                       <Image
                         src={item.coverImage || '/images/placeholder.png'}

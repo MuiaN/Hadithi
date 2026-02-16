@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, useParams } from 'next/navigation';
 import { 
   User, 
   Clock, 
@@ -15,7 +15,10 @@ import {
   Edit,
   Music,
   Book,
-  Image as ImageIcon
+  Image as ImageIcon,
+  ChevronDown,
+  ChevronRight,
+  FileText
 } from 'lucide-react';
 
 interface RelatedContentItem {
@@ -26,6 +29,13 @@ interface RelatedContentItem {
   chapterNumber: number | null;
   coverImage: string | null;
   slug?: string | null;
+}
+
+interface Chapter {
+  id: string;
+  title: string;
+  content: string;
+  subChapters: Chapter[];
 }
 
 interface ContentData {
@@ -54,16 +64,64 @@ interface ContentData {
   views: number;
   type: 'STORY' | 'ARTICLE' | 'BOOK' | 'PODCAST';
   relatedContent: RelatedContentItem[];
+  chapters?: Chapter[];
+  slug?: string | null;
 }
 
-export default function BookViewPage({ params }: { params: { id: string } }) {
+// Helper to find a chapter by ID recursively
+const findChapter = (chapters: Chapter[], id: string): Chapter | undefined => {
+  for (const chapter of chapters) {
+    if (chapter.id === id) return chapter;
+    if (chapter.subChapters) {
+      const found = findChapter(chapter.subChapters, id);
+      if (found) return found;
+    }
+  }
+  return undefined;
+};
+
+// Helper to find the path to a chapter
+const findChapterPath = (chapters: Chapter[], targetId: string, currentPath: string[] = []): string[] | null => {
+  for (const chapter of chapters) {
+    if (chapter.id === targetId) {
+      return [...currentPath, chapter.id];
+    }
+    if (chapter.subChapters && chapter.subChapters.length > 0) {
+      const path = findChapterPath(chapter.subChapters, targetId, [...currentPath, chapter.id]);
+      if (path) return path;
+    }
+  }
+  return null;
+};
+
+// Helper to get chapter numbering
+const getChapterNumbering = (chapters: Chapter[], targetId: string, parentIndexStr: string = ''): string | null => {
+  for (let i = 0; i < chapters.length; i++) {
+    const chapter = chapters[i];
+    const numbering = parentIndexStr ? `${parentIndexStr}.${i + 1}` : `${i + 1}`;
+    
+    if (chapter.id === targetId) return numbering;
+    
+    if (chapter.subChapters && chapter.subChapters.length > 0) {
+      const found = getChapterNumbering(chapter.subChapters, targetId, numbering);
+      if (found) return found;
+    }
+  }
+  return null;
+};
+
+export default function BookViewPage() {
+  const params = useParams();
+  const id = params.id as string;
   const [content, setContent] = useState<ContentData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [expandedChapters, setExpandedChapters] = useState<Record<string, boolean>>({});
+  const [activeChapterId, setActiveChapterId] = useState<string | null>(null); // null means Introduction
 
   useEffect(() => {
     const fetchContent = async () => {
       try {
-        const res = await fetch(`/api/v1/creator/content/${params.id}`);
+        const res = await fetch(`/api/v1/creator/content/${id}`);
         if (!res.ok) {
           if (res.status === 404) {
             notFound();
@@ -80,7 +138,7 @@ export default function BookViewPage({ params }: { params: { id: string } }) {
     };
 
     fetchContent();
-  }, [params.id]);
+  }, [id]);
 
   if (loading) {
     return <div className="flex justify-center items-center h-screen" style={{ backgroundColor: 'var(--color-background)' }}>Loading content...</div>;
@@ -89,6 +147,27 @@ export default function BookViewPage({ params }: { params: { id: string } }) {
   if (!content) {
     return notFound();
   }
+
+  const toggleChapter = (chapterId: string) => {
+    setExpandedChapters(prev => ({ ...prev, [chapterId]: !prev[chapterId] }));
+  };
+
+  const handleChapterClick = (chapter: Chapter) => {
+    setActiveChapterId(chapter.id);
+    if (content?.chapters) {
+      const path = findChapterPath(content.chapters, chapter.id);
+      if (path) {
+        const newExpanded: Record<string, boolean> = {};
+        path.forEach(id => { newExpanded[id] = true; });
+        setExpandedChapters(newExpanded);
+      }
+    }
+  };
+
+  const handleIntroductionClick = () => {
+    setActiveChapterId(null);
+    setExpandedChapters({});
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -108,97 +187,225 @@ export default function BookViewPage({ params }: { params: { id: string } }) {
     });
   };
 
-  return (
-    <main className="grid grid-cols-1 lg:grid-cols-12 gap-8 p-8" style={{ backgroundColor: 'var(--color-background)' }}>
-      <article className="lg:col-span-8">
-        <header className="mb-8">
-          <h1 className="text-4xl md:text-5xl font-extrabold my-4 leading-tight" style={{ color: 'var(--color-textPrimary)' }}>
-            {content.title}
-          </h1>
-          <p className="text-lg md:text-xl mt-2" style={{ color: 'var(--color-textSecondary)' }}>
-            {content.description}
-          </p>
-        </header>
+  const renderSidebarChapter = (chapter: Chapter, index: number, parentIndexStr: string = '') => {
+    const numbering = parentIndexStr ? `${parentIndexStr}.${index + 1}` : `${index + 1}`;
+    const isExpanded = expandedChapters[chapter.id];
+    const isActive = activeChapterId === chapter.id;
+    const hasSubChapters = chapter.subChapters && chapter.subChapters.length > 0;
 
-        {content.series && (
-          <div className="mb-8 p-4 rounded-lg flex items-center space-x-4" style={{ backgroundColor: 'var(--color-card)', border: '1px solid var(--color-border)' }}>
-            <Book size={24} style={{ color: 'var(--color-primary)' }} className="flex-shrink-0" />
-            <div>
-              <span className="text-sm" style={{ color: 'var(--color-textSecondary)' }}>Part of the series</span>
-              <p className="font-semibold" style={{ color: 'var(--color-textPrimary)' }}>{content.series.title}</p>
-            </div>
-          </div>
-        )}
-
-        <div className="flex items-center justify-between mb-8 p-4 rounded-lg" style={{ backgroundColor: 'var(--color-card)', border: '1px solid var(--color-border)' }}>
-          <div className="flex items-center space-x-4">
-            <Image 
-              src={content.author.avatar || '/default-avatar.png'} 
-              alt={content.author.name} 
-              width={48} 
-              height={48} 
-              className="rounded-full"
-            />
-            <div>
-              <p className="font-semibold" style={{ color: 'var(--color-textPrimary)' }}>{content.author.name}</p>
-              <p className="text-sm" style={{ color: 'var(--color-textSecondary)' }}>
-                {content.publishedAt 
-                  ? `Published on ${new Date(content.publishedAt).toLocaleString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`
-                  : `Created on ${new Date(content.createdAt).toLocaleString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`
-                }
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center space-x-4 text-sm" style={{ color: 'var(--color-textSecondary)' }}>
-            {content.readingTime && <div className="flex items-center space-x-1"><Clock size={14} /><span>{content.readingTime}</span></div>}
-            <div className="flex items-center space-x-1"><Eye size={14} /><span>{content.views} views</span></div>
-          </div>
+    return (
+      <div key={chapter.id} className="mb-1">
+        <div 
+          className={`flex items-center py-2 px-3 rounded-lg cursor-pointer transition-colors ${isActive ? 'bg-[var(--color-primary)] text-white' : 'hover:bg-[var(--color-backgroundSecondary)] text-[var(--color-textPrimary)]'}`}
+          onClick={() => handleChapterClick(chapter)}
+        >
+          {hasSubChapters ? (
+            <button 
+              onClick={(e) => { e.stopPropagation(); toggleChapter(chapter.id); }}
+              className={`mr-2 p-0.5 rounded-full hover:bg-black/10 ${isActive ? 'text-white' : 'text-[var(--color-textSecondary)]'}`}
+            >
+              {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+            </button>
+          ) : (
+            <span className="w-6"></span>
+          )}
+          <span className={`text-sm font-medium truncate ${isActive ? 'text-white' : ''}`}>
+            <span className={`mr-2 ${isActive ? 'text-white/80' : 'text-[var(--color-textSecondary)]'}`}>{numbering}</span>
+            {chapter.title}
+          </span>
         </div>
 
-        {content.coverImage && (
-          <div className="mb-8 rounded-lg overflow-hidden shadow-lg">
-            <Image 
-              src={content.coverImage} 
-              alt={content.title} 
-              width={1200} 
-              height={600} 
-              className="w-full h-auto object-cover"
-              priority
-            />
+        {hasSubChapters && isExpanded && (
+          <div className="ml-4 mt-1 border-l border-[var(--color-border)] pl-2">
+            {chapter.subChapters.map((sub, idx) => renderSidebarChapter(sub, idx, numbering))}
           </div>
         )}
+      </div>
+    );
+  };
 
-        <div 
-          className="prose lg:prose-xl max-w-none"
-          style={{ color: 'var(--color-textPrimary)' }}
-          dangerouslySetInnerHTML={{ __html: content.content }}
-        />
+  const activeChapter = content?.chapters && activeChapterId ? findChapter(content.chapters, activeChapterId) : null;
+  const activeChapterNumbering = content?.chapters && activeChapterId ? getChapterNumbering(content.chapters, activeChapterId) : null;
 
-        <footer className="mt-12 pt-8 border-t" style={{ borderColor: 'var(--color-border)' }}>
-          {content.tags.length > 0 && (
-            <div className="flex flex-wrap gap-2 mb-6">
-              <Tag size={16} className="mt-1" style={{ color: 'var(--color-textSecondary)' }} />
-              {content.tags.map(tag => (
-                <span key={tag.name} className="px-3 py-1 text-sm rounded-full" style={{ backgroundColor: 'var(--color-backgroundTertiary)', color: 'var(--color-textSecondary)' }}>
-                  {tag.name}
-                </span>
-              ))}
+  return (
+    <main className="grid grid-cols-1 lg:grid-cols-12 gap-8 p-8" style={{ backgroundColor: 'var(--color-background)' }}>
+      {/* Main Section */}
+      <div className="lg:col-span-8">
+        <div className="mb-8 p-8 rounded-xl shadow-sm" style={{ backgroundColor: 'var(--color-card)' }}>
+          {/* Header */}
+          <header className="mb-6">
+            <h1 className="text-3xl md:text-4xl font-extrabold mb-4 leading-tight" style={{ color: 'var(--color-textPrimary)' }}>
+              {content.title}
+            </h1>
+            <p className="text-lg md:text-xl mb-6" style={{ color: 'var(--color-textSecondary)' }}>
+              {content.description}
+            </p>
+
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm" style={{ color: 'var(--color-textSecondary)' }}>
+              <div className="flex items-center space-x-2">
+                <Image 
+                  src={content.author.avatar || '/default-avatar.png'} 
+                  alt={content.author.name} 
+                  width={24} 
+                  height={24} 
+                  className="rounded-full"
+                />
+                <span className="font-medium" style={{ color: 'var(--color-textPrimary)' }}>{content.author.name}</span>
+              </div>
+              
+              <span className="text-gray-300 dark:text-gray-600">•</span>
+              
+              <span>
+                {content.publishedAt 
+                  ? new Date(content.publishedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+                  : new Date(content.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+                }
+              </span>
+
+              {content.readingTime && (
+                <>
+                  <span className="text-gray-300 dark:text-gray-600">•</span>
+                  <div className="flex items-center space-x-1">
+                    <Clock size={14} />
+                    <span>{content.readingTime}</span>
+                  </div>
+                </>
+              )}
+
+              <span className="text-gray-300 dark:text-gray-600">•</span>
+              <div className="flex items-center space-x-1">
+                <Eye size={14} />
+                <span>{content.views} views</span>
+              </div>
+
+              {content.series && (
+                <>
+                  <span className="text-gray-300 dark:text-gray-600">•</span>
+                  <div className="flex items-center space-x-1 px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
+                    <Book size={14} />
+                    <span>Series: {content.series.title}</span>
+                  </div>
+                </>
+              )}
+            </div>
+          </header>
+
+          {content.coverImage && (
+            <div className="mb-8 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+              <div className="relative w-full h-64 md:h-80 lg:h-96">
+                <Image 
+                  src={content.coverImage} 
+                  alt={content.title} 
+                  fill
+                  className="object-cover"
+                  priority
+                />
+              </div>
             </div>
           )}
 
-          <div className="flex items-center justify-between mt-8">
-            <div className="flex items-center space-x-6" style={{ color: 'var(--color-textSecondary)' }}>
-              <div className="flex items-center space-x-2"><Heart /> <span>{content._count.likes} Likes</span></div>
-              <div className="flex items-center space-x-2"><MessageCircle /> <span>{content._count.comments} Comments</span></div>
-            </div>
-            <Link href={`/creator/books/edit/${content.id}`} className="inline-flex items-center justify-center px-6 py-3 rounded-lg font-medium transition-colors" style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}>
-              <Edit className="mr-2 h-4 w-4" />
-              Edit Book
-            </Link>
-          </div>
-        </footer>
-      </article>
+          {/* TOC + Content */}
+          <div className="flex flex-col md:flex-row gap-8 mb-8">
+            {/* Internal Sidebar: Table of Contents */}
+            <aside className="md:w-64 flex-shrink-0 border-r pr-6" style={{ borderColor: 'var(--color-border)' }}>
+              <div className="sticky top-24 max-h-[calc(100vh-8rem)] overflow-y-auto pr-2">
+                <h3 className="text-xs font-bold uppercase tracking-wider mb-4" style={{ color: 'var(--color-textSecondary)' }}>Table of Contents</h3>
+                
+                {/* Introduction Link */}
+                <div 
+                  className={`flex items-center py-2 px-3 mb-1 rounded-lg cursor-pointer transition-colors ${activeChapterId === null ? 'bg-[var(--color-primary)] text-white' : 'hover:bg-[var(--color-backgroundSecondary)] text-[var(--color-textPrimary)]'}`}
+                  onClick={handleIntroductionClick}
+                >
+                  <span className="w-6 flex justify-center"><FileText size={14} /></span>
+                  <span className="text-sm font-medium">Introduction</span>
+                </div>
 
+                {/* Chapters Tree */}
+                {content.chapters && content.chapters.map((chapter, index) => renderSidebarChapter(chapter, index))}
+              </div>
+            </aside>
+
+            {/* Reading Area */}
+            <article className="flex-1 min-w-0">
+              {activeChapterId === null ? (
+                // Introduction View
+                content.content ? (
+                  <div className="animate-in fade-in duration-300">
+                    <h2 className="text-2xl font-bold mb-6" style={{ color: 'var(--color-textPrimary)' }}>Introduction</h2>
+                    <div 
+                      className="prose lg:prose-xl dark:prose-invert max-w-none [&_p]:min-h-[1em]"
+                      style={{ color: 'var(--color-textPrimary)' }}
+                      dangerouslySetInnerHTML={{ __html: content.content }}
+                    />
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-64 text-gray-500">No introduction content available.</div>
+                )
+              ) : (
+                // Chapter View
+                activeChapter ? (
+                  <div className="animate-in fade-in duration-300">
+                    {activeChapterNumbering && (
+                      <div className="flex flex-col items-center justify-center mb-6">
+                        {activeChapterNumbering.includes('.') ? (
+                          <>
+                            <span className="text-xs font-bold tracking-widest uppercase mb-2" style={{ color: 'var(--color-textSecondary)' }}>
+                              Chapter {activeChapterNumbering.split('.')[0]}
+                            </span>
+                            <span className="text-sm font-bold tracking-widest uppercase px-4 py-1 rounded-full" style={{ backgroundColor: 'var(--color-backgroundSecondary)', color: 'var(--color-primary)' }}>
+                              Sub-chapter {activeChapterNumbering}
+                            </span>
+                          </>
+                        ) : (
+                          <span className="text-sm font-bold tracking-widest uppercase px-4 py-1 rounded-full" style={{ backgroundColor: 'var(--color-backgroundSecondary)', color: 'var(--color-primary)' }}>
+                            Chapter {activeChapterNumbering}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    <h1 className="text-3xl font-bold mb-8 pb-4 border-b text-center" style={{ color: 'var(--color-textPrimary)', borderColor: 'var(--color-border)' }}>
+                      {activeChapter.title}
+                    </h1>
+                    <div 
+                      className="prose lg:prose-xl dark:prose-invert max-w-none [&_p]:min-h-[1em]"
+                      style={{ color: 'var(--color-textPrimary)' }}
+                      dangerouslySetInnerHTML={{ __html: activeChapter.content }}
+                    />
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-64 text-gray-500">Chapter not found</div>
+                )
+              )}
+            </article>
+          </div>
+
+          <footer className="pt-8 mt-12 border-t" style={{ borderColor: 'var(--color-border)' }}>
+            {content.tags.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-6">
+                <Tag size={16} className="mt-1" style={{ color: 'var(--color-textSecondary)' }} />
+                {content.tags.map(tag => (
+                  <span key={tag.name} className="px-3 py-1 text-sm rounded-full" style={{ backgroundColor: 'var(--color-backgroundTertiary)', color: 'var(--color-textSecondary)' }}>
+                    {tag.name}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-6" style={{ color: 'var(--color-textSecondary)' }}>
+                <div className="flex items-center space-x-2"><Heart /> <span>{content._count.likes} Likes</span></div>
+                <div className="flex items-center space-x-2"><MessageCircle /> <span>{content._count.comments} Comments</span></div>
+              </div>
+              <Link href={`/creator/books/edit/${content.slug || content.id}`} className="inline-flex items-center justify-center px-6 py-3 rounded-lg font-medium transition-colors" style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}>
+                <Edit className="mr-2 h-4 w-4" />
+                Edit Book
+              </Link>
+            </div>
+          </footer>
+        </div>
+      </div>
+
+      {/* Right Sidebar: Series & Linked Content */}
       <aside className="lg:col-span-4 space-y-6 sticky top-8 self-start">
         {content.series && (
           <div className="p-6 rounded-lg" style={{ backgroundColor: 'var(--color-card)', border: '1px solid var(--color-border)' }}>
@@ -209,7 +416,16 @@ export default function BookViewPage({ params }: { params: { id: string } }) {
             <ul className="space-y-4">
               {content.relatedContent.map(item => (
                 <li key={item.id}>
-                  <Link href={item.type === 'BOOK' ? `/creator/books/${item.slug || item.id}` : `/creator/content/${item.slug || item.id}`} className="flex items-center space-x-3 group">
+                  <Link 
+                    href={
+                      item.type === 'STORY' ? `/creator/story/${item.slug || item.id}` :
+                      item.type === 'ARTICLE' ? `/creator/articles/${item.slug || item.id}` :
+                      item.type === 'BOOK' ? `/creator/books/${item.slug || item.id}` :
+                      item.type === 'PODCAST' ? `/creator/podcast/${item.slug || item.id}` :
+                      '#'
+                    } 
+                    className="flex items-center space-x-3 group"
+                  >
                     <div className="flex-shrink-0">
                       <Image
                         src={item.coverImage || '/images/placeholder.png'}

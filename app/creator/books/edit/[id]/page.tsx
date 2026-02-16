@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { 
   Save, 
   Upload, 
@@ -18,11 +18,13 @@ import dynamic from 'next/dynamic';
 import { upload } from '@vercel/blob/client';
 import { toast } from '@/components/ui/use-toast';
 import { Toaster } from '@/components/ui/toaster';
+import ChapterManager, { Chapter } from '@/components/creator/ChapterManager';
 
 const RichTextEditor = dynamic(() => import('@/components/ui/RichTextEditor'), { ssr: false });
 
-export default function EditBookPage({ params }: { params: { id: string } }) {
-  const { id } = params;
+export default function EditBookPage() {
+  const params = useParams();
+  const id = params.id as string;
   const cleanId = id.replace(/\/$/, '');
 
   interface FormDataState {
@@ -38,6 +40,7 @@ export default function EditBookPage({ params }: { params: { id: string } }) {
     chapterNumber: number | null;
     galleryId: string | null;
     linkedPodcastId: string | null;
+    chapters: Chapter[];
   }
 
   const [formData, setFormData] = useState<FormDataState>({
@@ -53,6 +56,7 @@ export default function EditBookPage({ params }: { params: { id: string } }) {
     chapterNumber: null as number | null,
     galleryId: null,
     linkedPodcastId: null,
+    chapters: [],
   });
   const [newTag, setNewTag] = useState('');
   const [seriesList, setSeriesList] = useState<{ id: string; title: string }[]>([]);
@@ -93,11 +97,17 @@ export default function EditBookPage({ params }: { params: { id: string } }) {
         }
         
         const contentData = await contentRes.json();
+
+        if (contentData.slug && contentData.slug !== cleanId) {
+          window.history.replaceState(null, '', `/creator/books/edit/${contentData.slug}`);
+        }
+
         setFormData({
           ...contentData,
           type: 'book', // Enforce type
           subscriptionTier: contentData.subscriptionTier?.toLowerCase() || null,
           tags: contentData.tags.map((t: { name: string }) => t.name),
+          chapters: contentData.chapters || [],
         });
         if (contentData.coverImage) setCoverImagePreview(contentData.coverImage);
 
@@ -122,6 +132,12 @@ export default function EditBookPage({ params }: { params: { id: string } }) {
   const handleSubmit = async (e: React.FormEvent, status?: 'DRAFT' | 'PENDING_APPROVAL') => {
     e.preventDefault();
     setSaving(true);
+
+    if (formData.seriesId && (formData.chapterNumber === null || formData.chapterNumber === undefined)) {
+      toast({ title: 'Error', description: 'Chapter number is required when content is part of a series.', variant: 'destructive' });
+      setSaving(false);
+      return;
+    }
     
     const data = new FormData();
     data.append('title', formData.title);
@@ -138,6 +154,7 @@ export default function EditBookPage({ params }: { params: { id: string } }) {
     if (formData.linkedPodcastId) data.append('linkedPodcastId', formData.linkedPodcastId);
     
     formData.tags.forEach(tag => data.append('tags', tag));
+    data.append('chapters', JSON.stringify(formData.chapters));
 
     if (coverImageFile) {
       const coverImageName = `media/images/${Date.now()}-${coverImageFile.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
@@ -155,12 +172,12 @@ export default function EditBookPage({ params }: { params: { id: string } }) {
       });
       if (!res.ok) {
         const errorData = await res.json();
-        throw new Error(errorData.message || 'Failed to update content');
+        throw new Error(errorData.message || (errorData.errors ? Object.values(errorData.errors).flat().join(', ') : 'Failed to update content'));
       }
       router.push('/creator/content');
     } catch (error) {
       console.error('Error updating content:', error);
-      setError((error as Error).message);
+      toast({ title: 'Error', description: (error as Error).message, variant: 'destructive' });
     } finally {
       setSaving(false);
     }
@@ -278,7 +295,10 @@ export default function EditBookPage({ params }: { params: { id: string } }) {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-textPrimary)' }}>Description</label>
-                <textarea name="description" required rows={3} value={formData.description} onChange={handleChange} className="w-full px-4 py-3 rounded-lg border" style={{ backgroundColor: 'var(--color-input)', borderColor: 'var(--color-inputBorder)', color: 'var(--color-textPrimary)' }} placeholder="Provide a brief description..." />
+                <textarea name="description" required rows={3} maxLength={250} value={formData.description} onChange={handleChange} className="w-full px-4 py-3 rounded-lg border" style={{ backgroundColor: 'var(--color-input)', borderColor: 'var(--color-inputBorder)', color: 'var(--color-textPrimary)' }} placeholder="Provide a brief description..." />
+                <div className="text-right text-xs mt-1" style={{ color: 'var(--color-textSecondary)' }}>
+                  {250 - (formData.description?.length || 0)} characters remaining
+                </div>
               </div>
             </div>
             <div className="border-t pt-6 mt-6" style={{ borderColor: 'var(--color-border)' }}>
@@ -345,8 +365,16 @@ export default function EditBookPage({ params }: { params: { id: string } }) {
                 </div>
               </div>
               <div>
-                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-textPrimary)' }}>Content</label>
-                <RichTextEditor value={formData.content} onChange={(value) => setFormData(prev => ({ ...prev, content: value }))} />
+                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-textPrimary)' }}>Introduction / Preface</label>
+                <RichTextEditor value={formData.content} onChange={(value) => setFormData(prev => ({ ...prev, content: value }))} folderName={formData.title} />
+              </div>
+
+              <div className="pt-6 border-t" style={{ borderColor: 'var(--color-border)' }}>
+                <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--color-textPrimary)' }}>Chapters</h3>
+                <ChapterManager 
+                  chapters={formData.chapters} 
+                  onChange={(chapters) => setFormData(prev => ({ ...prev, chapters }))} 
+                />
               </div>
             </div>
           </div>

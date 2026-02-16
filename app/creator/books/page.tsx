@@ -18,6 +18,7 @@ import dynamic from 'next/dynamic';
 import { upload } from '@vercel/blob/client';
 import { toast } from '@/components/ui/use-toast';
 import { Toaster } from '@/components/ui/toaster';
+import ChapterManager, { Chapter } from '@/components/creator/ChapterManager';
 
 // Dynamically import a rich text editor to avoid SSR issues
 const RichTextEditor = dynamic(() => import('@/components/ui/RichTextEditor'), { ssr: false });
@@ -31,12 +32,13 @@ export default function NewBookPage() {
     tags: [] as string[],
     coverImage: '',
     isFree: true,
-    subscriptionTier: null,
+    subscriptionTier: null as string | null,
     rejectionReason: null,
     seriesId: null,
     chapterNumber: null as number | null,
     galleryId: null,
     linkedPodcastId: null,
+    chapters: [] as Chapter[],
   });
   const [newTag, setNewTag] = useState('');
   const [seriesList, setSeriesList] = useState<{ id: string; title: string }[]>([]);
@@ -73,13 +75,14 @@ export default function NewBookPage() {
     data.append('status', status);
     data.append('isFree', String(formData.isFree));
     
-    if (formData.subscriptionTier) data.append('subscriptionTier', formData.subscriptionTier);
+    if (formData.subscriptionTier) data.append('subscriptionTier', formData.subscriptionTier.toUpperCase());
     if (formData.seriesId) data.append('seriesId', formData.seriesId);
     if (formData.chapterNumber) data.append('chapterNumber', String(formData.chapterNumber));
     if (formData.galleryId) data.append('galleryId', formData.galleryId);
     if (formData.linkedPodcastId) data.append('linkedPodcastId', formData.linkedPodcastId);
     
     formData.tags.forEach(tag => data.append('tags', tag));
+    data.append('chapters', JSON.stringify(formData.chapters));
 
     if (coverImageFile) {
       const coverImageName = `media/images/${Date.now()}-${coverImageFile.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
@@ -95,10 +98,14 @@ export default function NewBookPage() {
         method: 'POST',
         body: data,
       });
-      if (!res.ok) throw new Error('Failed to create content');
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || (errorData.errors ? Object.values(errorData.errors).flat().join(', ') : 'Failed to create content'));
+      }
       router.push('/creator');
     } catch (error) {
       console.error('Error creating content:', error);
+      toast({ title: 'Error', description: (error as Error).message, variant: 'destructive' });
     } finally {
       setSaving(false);
     }
@@ -238,6 +245,7 @@ export default function NewBookPage() {
                   name="description"
                   required
                   rows={3}
+                  maxLength={250}
                   value={formData.description}
                   onChange={handleChange}
                   className="w-full px-4 py-3 rounded-lg border"
@@ -248,6 +256,9 @@ export default function NewBookPage() {
                   }}
                   placeholder="Provide a brief description..."
                 />
+                <div className="text-right text-xs mt-1" style={{ color: 'var(--color-textSecondary)' }}>
+                  {250 - (formData.description?.length || 0)} characters remaining
+                </div>
               </div>
             </div>
 
@@ -391,11 +402,20 @@ export default function NewBookPage() {
 
               <div>
                 <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-textPrimary)' }}>
-                  Content
+                  Introduction / Preface
                 </label>
                 <RichTextEditor
                   value={formData.content}
                   onChange={(value) => setFormData(prev => ({ ...prev, content: value }))}
+                  folderName={formData.title}
+                />
+              </div>
+
+              <div className="pt-6 border-t" style={{ borderColor: 'var(--color-border)' }}>
+                <h3 className="text-lg font-semibold mb-4" style={{ color: 'var(--color-textPrimary)' }}>Chapters</h3>
+                <ChapterManager 
+                  chapters={formData.chapters} 
+                  onChange={(chapters) => setFormData(prev => ({ ...prev, chapters }))} 
                 />
               </div>
             </div>

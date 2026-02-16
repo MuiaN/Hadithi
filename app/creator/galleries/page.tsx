@@ -494,12 +494,16 @@ export default function CreatorGalleriesPage() {
                     value={formData.description}
                     onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                     rows={3}
+                    maxLength={250}
                     style={{
                       backgroundColor: 'var(--color-input)',
                       borderColor: 'var(--color-inputBorder)',
                       color: 'var(--color-textPrimary)'
                     }}
                   />
+                  <div className="text-right text-xs mt-1" style={{ color: 'var(--color-textSecondary)' }}>
+                    {250 - (formData.description?.length || 0)} characters remaining
+                  </div>
                 </div>
                 <div>
                   <Label htmlFor="tags" style={{ color: 'var(--color-textPrimary)' }}>Tags</Label>

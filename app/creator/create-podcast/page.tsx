@@ -79,7 +79,7 @@ export default function CreatePodcastPage() {
     data.append('type', 'PODCAST');
     data.append('status', status);
     data.append('isFree', String(formData.isFree));
-    if (formData.subscriptionTier) data.append('subscriptionTier', formData.subscriptionTier);
+    if (formData.subscriptionTier) data.append('subscriptionTier', formData.subscriptionTier.toUpperCase());
     if (formData.seriesId) data.append('seriesId', formData.seriesId);
     if (formData.chapterNumber) data.append('chapterNumber', String(formData.chapterNumber));
     if (formData.duration) data.append('duration', formData.duration);
@@ -241,7 +241,10 @@ export default function CreatePodcastPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2">Description</label>
-                <textarea name="description" required rows={3} value={formData.description} onChange={handleChange} className="w-full px-4 py-3 rounded-lg border" style={{ backgroundColor: 'var(--color-input)', borderColor: 'var(--color-inputBorder)', color: 'var(--color-textPrimary)' }} placeholder="A brief summary of the episode..." />
+                <textarea name="description" required rows={3} maxLength={250} value={formData.description} onChange={handleChange} className="w-full px-4 py-3 rounded-lg border" style={{ backgroundColor: 'var(--color-input)', borderColor: 'var(--color-inputBorder)', color: 'var(--color-textPrimary)' }} placeholder="A brief summary of the episode..." />
+                <div className="text-right text-xs mt-1" style={{ color: 'var(--color-textSecondary)' }}>
+                  {250 - (formData.description?.length || 0)} characters remaining
+                </div>
               </div>
             </div>
           </div>
@@ -279,7 +282,7 @@ export default function CreatePodcastPage() {
           {/* Show Notes */}
           <div className="p-6 rounded-lg" style={{ backgroundColor: 'var(--color-card)', border: '1px solid var(--color-border)' }}>
             <h2 className="text-xl font-semibold mb-6">Show Notes</h2>
-            <RichTextEditor value={formData.content} onChange={(value) => setFormData(prev => ({ ...prev, content: value }))} />
+            <RichTextEditor value={formData.content} onChange={(value) => setFormData(prev => ({ ...prev, content: value }))} folderName={formData.title} />
           </div>
 
           {/* Tags and Settings */}

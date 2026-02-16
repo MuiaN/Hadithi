@@ -22,6 +22,9 @@ const createContentSchema = z.object({
   galleryId: z.string().cuid().optional().nullable(),
   status: z.nativeEnum(ContentStatus).optional(),
   linkedPodcastId: z.string().cuid().optional().nullable(),
+  youtubeUrls: z.array(z.string().url()).optional().nullable(),
+  citations: z.string().optional().nullable(),
+  chapters: z.any().optional().nullable(),
 });
 
 /**
@@ -187,6 +190,9 @@ export async function POST(req: NextRequest) {
     galleryId: formData.get('galleryId') === 'null' ? null : formData.get('galleryId'),
     linkedPodcastId: formData.get('linkedPodcastId') === 'null' ? null : formData.get('linkedPodcastId'),
     tags: formData.getAll('tags').map(t => t.toString()),
+    youtubeUrls: formData.getAll('youtubeUrls').map(t => t.toString()),
+    citations: formData.get('citations'),
+    chapters: formData.get('chapters') ? JSON.parse(formData.get('chapters') as string) : undefined,
   };
 
   const validation = createContentSchema.safeParse(rawData);
@@ -254,6 +260,9 @@ export async function POST(req: NextRequest) {
           create: { name: tagName },
         })),
       } : undefined,
+      youtubeUrls: validatedData.youtubeUrls || [],
+      citations: validatedData.citations,
+      chapters: validatedData.chapters ?? Prisma.JsonNull,
 
       // Store URLs
       coverImage: coverImageUrl,

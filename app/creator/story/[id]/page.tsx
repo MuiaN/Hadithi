@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import { notFound, useParams } from 'next/navigation';
 import { 
   User, 
   Clock, 
@@ -45,8 +45,8 @@ interface ContentData {
   };
   tags: { name: string }[];
   series: { id: string; title: string } | null;
-  gallery: { id: string; title: string; createdAt: string; images: { url: string }[] } | null;
-  linkedPodcast: { id: string; title: string; createdAt: string; coverImage: string | null; } | null;
+  gallery: { id: string; title: string; createdAt: string; images: { url: string }[]; slug?: string | null } | null;
+  linkedPodcast: { id: string; title: string; createdAt: string; coverImage: string | null; slug?: string | null } | null;
   _count: {
     likes: number;
     comments: number;
@@ -56,14 +56,16 @@ interface ContentData {
   relatedContent: RelatedContentItem[];
 }
 
-export default function StoryViewPage({ params }: { params: { id: string } }) {
+export default function StoryViewPage() {
+  const params = useParams();
+  const id = params.id as string;
   const [content, setContent] = useState<ContentData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchContent = async () => {
       try {
-        const res = await fetch(`/api/v1/creator/content/${params.id}`);
+        const res = await fetch(`/api/v1/creator/content/${id}`);
         if (!res.ok) {
           if (res.status === 404) {
             notFound();
@@ -80,7 +82,7 @@ export default function StoryViewPage({ params }: { params: { id: string } }) {
     };
 
     fetchContent();
-  }, [params.id]);
+  }, [id]);
 
   if (loading) {
     return <div className="flex justify-center items-center h-screen" style={{ backgroundColor: 'var(--color-background)' }}>Loading content...</div>;
@@ -111,65 +113,79 @@ export default function StoryViewPage({ params }: { params: { id: string } }) {
   return (
     <main className="grid grid-cols-1 lg:grid-cols-12 gap-8 p-8" style={{ backgroundColor: 'var(--color-background)' }}>
       <article className="lg:col-span-8">
-        <header className="mb-8">
-          <h1 className="text-4xl md:text-5xl font-extrabold my-4 leading-tight" style={{ color: 'var(--color-textPrimary)' }}>
+        <header className="mb-6">
+          <h1 className="text-3xl md:text-4xl font-extrabold mb-4 leading-tight" style={{ color: 'var(--color-textPrimary)' }}>
             {content.title}
           </h1>
-          <p className="text-lg md:text-xl mt-2" style={{ color: 'var(--color-textSecondary)' }}>
+          <p className="text-lg md:text-xl mb-6" style={{ color: 'var(--color-textSecondary)' }}>
             {content.description}
           </p>
+
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm" style={{ color: 'var(--color-textSecondary)' }}>
+            <div className="flex items-center space-x-2">
+              <Image 
+                src={content.author.avatar || '/default-avatar.png'} 
+                alt={content.author.name} 
+                width={24} 
+                height={24} 
+                className="rounded-full"
+              />
+              <span className="font-medium" style={{ color: 'var(--color-textPrimary)' }}>{content.author.name}</span>
+            </div>
+            
+            <span className="text-gray-300 dark:text-gray-600">•</span>
+            
+            <span>
+              {content.publishedAt 
+                ? new Date(content.publishedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+                : new Date(content.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+              }
+            </span>
+
+            {content.readingTime && (
+              <>
+                <span className="text-gray-300 dark:text-gray-600">•</span>
+                <div className="flex items-center space-x-1">
+                  <Clock size={14} />
+                  <span>{content.readingTime}</span>
+                </div>
+              </>
+            )}
+
+            <span className="text-gray-300 dark:text-gray-600">•</span>
+            <div className="flex items-center space-x-1">
+              <Eye size={14} />
+              <span>{content.views} views</span>
+            </div>
+
+            {content.series && (
+              <>
+                <span className="text-gray-300 dark:text-gray-600">•</span>
+                <div className="flex items-center space-x-1 px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400">
+                  <Book size={14} />
+                  <span>Series: {content.series.title}</span>
+                </div>
+              </>
+            )}
+          </div>
         </header>
 
-        {content.series && (
-          <div className="mb-8 p-4 rounded-lg flex items-center space-x-4" style={{ backgroundColor: 'var(--color-card)', border: '1px solid var(--color-border)' }}>
-            <Book size={24} style={{ color: 'var(--color-primary)' }} className="flex-shrink-0" />
-            <div>
-              <span className="text-sm" style={{ color: 'var(--color-textSecondary)' }}>Part of the series</span>
-              <p className="font-semibold" style={{ color: 'var(--color-textPrimary)' }}>{content.series.title}</p>
-            </div>
-          </div>
-        )}
-
-        <div className="flex items-center justify-between mb-8 p-4 rounded-lg" style={{ backgroundColor: 'var(--color-card)', border: '1px solid var(--color-border)' }}>
-          <div className="flex items-center space-x-4">
-            <Image 
-              src={content.author.avatar || '/default-avatar.png'} 
-              alt={content.author.name} 
-              width={48} 
-              height={48} 
-              className="rounded-full"
-            />
-            <div>
-              <p className="font-semibold" style={{ color: 'var(--color-textPrimary)' }}>{content.author.name}</p>
-              <p className="text-sm" style={{ color: 'var(--color-textSecondary)' }}>
-                {content.publishedAt 
-                  ? `Published on ${new Date(content.publishedAt).toLocaleString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`
-                  : `Created on ${new Date(content.createdAt).toLocaleString('en-US', { year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit' })}`
-                }
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center space-x-4 text-sm" style={{ color: 'var(--color-textSecondary)' }}>
-            {content.readingTime && <div className="flex items-center space-x-1"><Clock size={14} /><span>{content.readingTime}</span></div>}
-            <div className="flex items-center space-x-1"><Eye size={14} /><span>{content.views} views</span></div>
-          </div>
-        </div>
-
         {content.coverImage && (
-          <div className="mb-8 rounded-lg overflow-hidden shadow-lg">
-            <Image 
-              src={content.coverImage} 
-              alt={content.title} 
-              width={1200} 
-              height={600} 
-              className="w-full h-auto object-cover"
-              priority
-            />
+          <div className="mb-8 rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
+            <div className="relative w-full h-64 md:h-80 lg:h-96">
+              <Image 
+                src={content.coverImage} 
+                alt={content.title} 
+                fill
+                className="object-cover"
+                priority
+              />
+            </div>
           </div>
         )}
 
         <div 
-          className="prose lg:prose-xl max-w-none"
+          className="prose lg:prose-xl dark:prose-invert max-w-none [&_p]:min-h-[1em]"
           style={{ color: 'var(--color-textPrimary)' }}
           dangerouslySetInnerHTML={{ __html: content.content }}
         />
@@ -209,7 +225,13 @@ export default function StoryViewPage({ params }: { params: { id: string } }) {
             <ul className="space-y-4">
               {content.relatedContent.map(item => (
                 <li key={item.id}>
-                  <Link href={item.type === 'STORY' ? `/creator/story/${item.slug || item.id}` : `/creator/content/${item.slug || item.id}`} className="flex items-center space-x-3 group">
+                  <Link href={
+                    item.type === 'STORY' ? `/creator/story/${item.slug || item.id}` :
+                    item.type === 'ARTICLE' ? `/creator/articles/${item.slug || item.id}` :
+                    item.type === 'BOOK' ? `/creator/books/${item.slug || item.id}` :
+                    item.type === 'PODCAST' ? `/creator/podcast/${item.slug || item.id}` :
+                    '#'
+                  } className="flex items-center space-x-3 group">
                     <div className="flex-shrink-0">
                       <Image
                         src={item.coverImage || '/images/placeholder.png'}
@@ -255,7 +277,7 @@ export default function StoryViewPage({ params }: { params: { id: string } }) {
               <div className="flex-1 min-w-0">
                 <p className="font-semibold truncate" style={{ color: 'var(--color-textPrimary)' }}>{content.linkedPodcast.title}</p>
                 <p className="text-xs mt-1" style={{ color: 'var(--color-textSecondary)' }}>Created: {formatSimpleDate(content.linkedPodcast.createdAt)}</p>
-                <Link href={`/creator/podcast/${content.linkedPodcast.id}`} className="inline-block mt-2 px-3 py-1 text-xs rounded-lg whitespace-nowrap" style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}>
+                <Link href={`/creator/podcast/${content.linkedPodcast.slug || content.linkedPodcast.id}`} className="inline-block mt-2 px-3 py-1 text-xs rounded-lg whitespace-nowrap" style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}>
                   View
                 </Link>
               </div>
@@ -283,7 +305,7 @@ export default function StoryViewPage({ params }: { params: { id: string } }) {
               <div className="flex-1 min-w-0">
                 <p className="font-semibold truncate" style={{ color: 'var(--color-textPrimary)' }}>{content.gallery.title}</p>
                 <p className="text-xs mt-1" style={{ color: 'var(--color-textSecondary)' }}>Created: {formatSimpleDate(content.gallery.createdAt)}</p>
-                <Link href={`/creator/gallery/${content.gallery.id}`} className="inline-block mt-2 px-3 py-1 text-xs rounded-lg whitespace-nowrap" style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}>
+                <Link href={`/creator/galleries/${content.gallery.slug || content.gallery.id}`} className="inline-block mt-2 px-3 py-1 text-xs rounded-lg whitespace-nowrap" style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}>
                   View Gallery
                 </Link>
               </div>

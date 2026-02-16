@@ -2,9 +2,6 @@
 const nextConfig = {
   reactStrictMode: false,
   trailingSlash: true,
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   images: { unoptimized: true },
 
   transpilePackages: ['jose'],
@@ -17,7 +14,7 @@ const nextConfig = {
         net: false,
         tls: false,
       };
-    }
+    }  
 
     // Ensure proper module resolution
     config.resolve = {

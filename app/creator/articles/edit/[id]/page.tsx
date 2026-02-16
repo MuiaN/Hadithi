@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { 
   Save, 
   Upload, 
@@ -11,7 +11,8 @@ import {
   Send,
   Image as ImageIcon,
   Link2,
-  Trash2
+  Trash2,
+  Youtube
 } from 'lucide-react';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
@@ -21,8 +22,9 @@ import { Toaster } from '@/components/ui/toaster';
 
 const RichTextEditor = dynamic(() => import('@/components/ui/RichTextEditor'), { ssr: false });
 
-export default function EditArticlePage({ params }: { params: { id: string } }) {
-  const { id } = params;
+export default function EditArticlePage() {
+  const params = useParams();
+  const id = params.id as string;
   const cleanId = id.replace(/\/$/, '');
 
   interface FormDataState {
@@ -38,6 +40,8 @@ export default function EditArticlePage({ params }: { params: { id: string } }) 
     chapterNumber: number | null;
     galleryId: string | null;
     linkedPodcastId: string | null;
+    youtubeUrls: string[];
+    citations: string;
   }
 
   const [formData, setFormData] = useState<FormDataState>({
@@ -53,8 +57,11 @@ export default function EditArticlePage({ params }: { params: { id: string } }) 
     chapterNumber: null as number | null,
     galleryId: null,
     linkedPodcastId: null,
+    youtubeUrls: [],
+    citations: '',
   });
   const [newTag, setNewTag] = useState('');
+  const [youtubeUrls, setYoutubeUrls] = useState<string[]>(['']);
   const [seriesList, setSeriesList] = useState<{ id: string; title: string }[]>([]);
   const [showNewSeriesInput, setShowNewSeriesInput] = useState(false);
   const [newSeriesTitle, setNewSeriesTitle] = useState('');
@@ -93,11 +100,18 @@ export default function EditArticlePage({ params }: { params: { id: string } }) 
         }
         
         const contentData = await contentRes.json();
+
+        if (contentData.slug && contentData.slug !== cleanId) {
+          window.history.replaceState(null, '', `/creator/articles/edit/${contentData.slug}`);
+        }
+
         setFormData({
           ...contentData,
           type: 'article', // Enforce type
           subscriptionTier: contentData.subscriptionTier?.toLowerCase() || null,
           tags: contentData.tags.map((t: { name: string }) => t.name),
+          youtubeUrls: contentData.youtubeUrls || [],
+          citations: contentData.citations || '',
         });
         if (contentData.coverImage) setCoverImagePreview(contentData.coverImage);
 
@@ -108,6 +122,10 @@ export default function EditArticlePage({ params }: { params: { id: string } }) 
           setPodcastsList(allPodcasts.filter((p: { id: string }) => p.id !== cleanId));
         }
         if (tagsRes.ok) setExistingTags(await tagsRes.json());
+
+        if (contentData.youtubeUrls && contentData.youtubeUrls.length > 0) {
+          setYoutubeUrls(contentData.youtubeUrls);
+        }
 
       } catch (error) {
         console.error('Error fetching initial data:', error);
@@ -127,6 +145,7 @@ export default function EditArticlePage({ params }: { params: { id: string } }) 
     data.append('title', formData.title);
     data.append('description', formData.description);
     data.append('content', formData.content);
+    data.append('citations', formData.citations);
     data.append('type', 'ARTICLE');
     data.append('isFree', String(formData.isFree));
     
@@ -138,6 +157,7 @@ export default function EditArticlePage({ params }: { params: { id: string } }) 
     if (formData.linkedPodcastId) data.append('linkedPodcastId', formData.linkedPodcastId);
     
     formData.tags.forEach(tag => data.append('tags', tag));
+    youtubeUrls.filter(url => url.trim() !== '').forEach(url => data.append('youtubeUrls', url));
 
     if (coverImageFile) {
       const coverImageName = `media/images/${Date.now()}-${coverImageFile.name.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
@@ -155,12 +175,13 @@ export default function EditArticlePage({ params }: { params: { id: string } }) 
       });
       if (!res.ok) {
         const errorData = await res.json();
-        throw new Error(errorData.message || 'Failed to update content');
+        throw new Error(errorData.message || (errorData.errors ? Object.values(errorData.errors).flat().join(', ') : 'Failed to update content'));
       }
       router.push('/creator/content');
     } catch (error) {
       console.error('Error updating content:', error);
       setError((error as Error).message);
+      toast({ title: 'Error', description: (error as Error).message, variant: 'destructive' });
     } finally {
       setSaving(false);
     }
@@ -238,6 +259,21 @@ export default function EditArticlePage({ params }: { params: { id: string } }) 
     setFormData(prev => ({ ...prev, tags: prev.tags.filter(tag => tag !== tagToRemove) }));
   };
 
+  const handleYoutubeUrlChange = (index: number, value: string) => {
+    const newUrls = [...youtubeUrls];
+    newUrls[index] = value;
+    setYoutubeUrls(newUrls);
+  };
+
+  const addYoutubeUrl = () => {
+    setYoutubeUrls([...youtubeUrls, '']);
+  };
+
+  const removeYoutubeUrl = (index: number) => {
+    const newUrls = youtubeUrls.filter((_, i) => i !== index);
+    setYoutubeUrls(newUrls.length ? newUrls : ['']);
+  };
+
   if (loading) {
     return <div className="flex justify-center items-center h-screen">Loading...</div>;
   }
@@ -278,7 +314,10 @@ export default function EditArticlePage({ params }: { params: { id: string } }) 
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-textPrimary)' }}>Description</label>
-                <textarea name="description" required rows={3} value={formData.description} onChange={handleChange} className="w-full px-4 py-3 rounded-lg border" style={{ backgroundColor: 'var(--color-input)', borderColor: 'var(--color-inputBorder)', color: 'var(--color-textPrimary)' }} placeholder="Provide a brief description..." />
+                <textarea name="description" required rows={3} maxLength={250} value={formData.description} onChange={handleChange} className="w-full px-4 py-3 rounded-lg border" style={{ backgroundColor: 'var(--color-input)', borderColor: 'var(--color-inputBorder)', color: 'var(--color-textPrimary)' }} placeholder="Provide a brief description..." />
+                <div className="text-right text-xs mt-1" style={{ color: 'var(--color-textSecondary)' }}>
+                  {250 - (formData.description?.length || 0)} characters remaining
+                </div>
               </div>
             </div>
             <div className="border-t pt-6 mt-6" style={{ borderColor: 'var(--color-border)' }}>
@@ -346,7 +385,184 @@ export default function EditArticlePage({ params }: { params: { id: string } }) 
               </div>
               <div>
                 <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-textPrimary)' }}>Content</label>
-                <RichTextEditor value={formData.content} onChange={(value) => setFormData(prev => ({ ...prev, content: value }))} />
+                <RichTextEditor value={formData.content} onChange={(value) => setFormData(prev => ({ ...prev, content: value }))} folderName={formData.title} />
+              </div>
+            </div>
+          </div>
+
+          <div className="p-6 rounded-lg" style={{ backgroundColor: 'var(--color-card)', border: '1px solid var(--color-border)' }}>
+            <h2 className="text-xl font-semibold mb-6" style={{ color: 'var(--color-textPrimary)' }}>
+              Citations & References
+            </h2>
+            <RichTextEditor
+              value={formData.citations}
+              onChange={(value) => setFormData(prev => ({ ...prev, citations: value }))}
+              disableImages={true}
+            />
+          </div>
+
+          {/* YouTube Links */}
+          <div className="p-6 rounded-lg" style={{ backgroundColor: 'var(--color-card)', border: '1px solid var(--color-border)' }}>
+            <h2 className="text-xl font-semibold mb-6 flex items-center space-x-2" style={{ color: 'var(--color-textPrimary)' }}>
+              <Youtube size={20} />
+              <span>YouTube Videos</span>
+            </h2>
+            <div className="space-y-4">
+              {youtubeUrls.map((url, index) => (
+                <div key={index} className="flex items-center space-x-2">
+                  <input
+                    type="url"
+                    value={url}
+                    onChange={(e) => handleYoutubeUrlChange(index, e.target.value)}
+                    className="flex-1 px-4 py-2 rounded-lg border"
+                    style={{
+                      backgroundColor: 'var(--color-input)',
+                      borderColor: 'var(--color-inputBorder)',
+                      color: 'var(--color-textPrimary)'
+                    }}
+                    placeholder="https://www.youtube.com/watch?v=..."
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeYoutubeUrl(index)}
+                    className="p-2 text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                    title="Remove link"
+                  >
+                    <Trash2 size={18} />
+                  </button>
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={addYoutubeUrl}
+                className="flex items-center space-x-2 px-4 py-2 rounded-lg font-medium transition-colors"
+                style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}
+              >
+                <Plus size={16} />
+                <span>Add another video</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Tags and Settings */}
+          <div className="p-6 rounded-lg" style={{ backgroundColor: 'var(--color-card)', border: '1px solid var(--color-border)' }}>
+            <h2 className="text-xl font-semibold mb-6" style={{ color: 'var(--color-textPrimary)' }}>
+              Tags & Settings
+            </h2>
+
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-textPrimary)' }}>
+                  Tags
+                </label>
+                <div className="relative">
+                  <div className="flex space-x-2 mb-3">
+                    <input
+                      type="text"
+                      value={newTag}
+                      onChange={(e) => setNewTag(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), addTag())}
+                      onFocus={() => setTagInputFocused(true)}
+                      onBlur={() => setTimeout(() => setTagInputFocused(false), 150)}
+                      className="flex-1 px-3 py-2 rounded-lg border"
+                      style={{
+                        backgroundColor: 'var(--color-input)',
+                        borderColor: 'var(--color-inputBorder)',
+                        color: 'var(--color-textPrimary)'
+                      }}
+                      placeholder="Add a tag..."
+                    />
+                    <button
+                      type="button"
+                      onClick={addTag}
+                      className="px-4 py-2 rounded-lg transition-colors"
+                      style={{ backgroundColor: 'var(--color-primary)', color: 'white' }}
+                    >
+                      <Plus size={16} />
+                    </button>
+                  </div>
+                  {tagInputFocused && (
+                    <div className="absolute z-10 w-full max-h-48 overflow-y-auto p-2 rounded-lg border mt-1" style={{ backgroundColor: 'var(--color-card)', borderColor: 'var(--color-border)' }}>
+                      <h4 className="text-xs font-semibold uppercase text-gray-400 mb-2 px-1">Available Tags</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {existingTags
+                          .filter(tag => !formData.tags.includes(tag))
+                          .filter(tag => tag.toLowerCase().includes(newTag.toLowerCase()))
+                          .map(tag => (
+                            <button
+                              key={tag}
+                              type="button"
+                              onMouseDown={() => addExistingTag(tag)}
+                              className="px-3 py-1 text-sm rounded-full transition-colors"
+                              style={{ backgroundColor: 'var(--color-backgroundSecondary)', color: 'var(--color-textPrimary)', border: '1px solid var(--color-border)' }}
+                            >
+                              {tag}
+                            </button>
+                          ))
+                        }
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className="flex flex-wrap gap-2 mt-4">
+                  {formData.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="inline-flex items-center space-x-1 px-3 py-1 rounded-full text-sm"
+                      style={{ backgroundColor: 'var(--color-backgroundSecondary)', color: 'var(--color-textPrimary)' }}
+                    >
+                      <span>{tag}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeTag(tag)}
+                        className="hover:text-red-500"
+                      >
+                        <X size={12} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      name="isFree"
+                      checked={formData.isFree}
+                      onChange={handleChange}
+                      className="rounded"
+                    />
+                    <span className="text-sm" style={{ color: 'var(--color-textPrimary)' }}>
+                      Free Content
+                    </span>
+                  </label>
+                </div>
+
+                {!formData.isFree && (
+                  <div>
+                    <label className="block text-sm font-medium mb-2" style={{ color: 'var(--color-textPrimary)' }}>
+                      Subscription Tier Required
+                    </label>
+                    <select
+                      name="subscriptionTier"
+                      value={formData.subscriptionTier || ''}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 rounded-lg border"
+                      style={{
+                        backgroundColor: 'var(--color-input)',
+                        borderColor: 'var(--color-inputBorder)',
+                        color: 'var(--color-textPrimary)'
+                      }}
+                    >
+                      <option value="">Select tier</option>
+                      <option value="bronze">Bronze</option>
+                      <option value="silver">Silver</option>
+                      <option value="gold">Gold</option>
+                    </select>
+                  </div>
+                )}
               </div>
             </div>
           </div>
