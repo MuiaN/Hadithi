@@ -3,6 +3,7 @@ const nextConfig = {
   reactStrictMode: false,
   trailingSlash: true,
   images: { unoptimized: true },
+  turbopack: {},
 
   transpilePackages: ['jose'],
 
