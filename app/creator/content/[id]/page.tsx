@@ -57,14 +57,15 @@ interface ContentData {
   relatedContent: RelatedContentItem[];
 }
 
-export default function CreatorContentViewPage({ params }: { params: { id: string } }) {
+export default function CreatorContentViewPage({ params }: { params: Promise<{ id: string }> }) {
   const [content, setContent] = useState<ContentData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchContent = async () => {
       try {
-        const res = await fetch(`/api/v1/creator/content/${params.id}`);
+        const { id } = await params;
+        const res = await fetch(`/api/v1/creator/content/${id}`);
         if (!res.ok) {
           if (res.status === 404) {
             notFound();
@@ -81,7 +82,7 @@ export default function CreatorContentViewPage({ params }: { params: { id: strin
     };
 
     fetchContent();
-  }, [params.id]);
+  }, [params]);
 
   if (loading) {
     return <div className="flex justify-center items-center h-screen" style={{ backgroundColor: 'var(--color-background)' }}>Loading content...</div>;

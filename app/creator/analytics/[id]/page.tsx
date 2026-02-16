@@ -39,7 +39,7 @@ interface AnalyticsData {
   }[];
 }
 
-export default function AnalyticsPage({ params }: { params: { id: string } }) {
+export default function AnalyticsPage({ params }: { params: Promise<{ id: string }> }) {
   const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +48,8 @@ export default function AnalyticsPage({ params }: { params: { id: string } }) {
   useEffect(() => {
     const fetchAnalytics = async () => {
       try {
-        const res = await fetch(`/api/v1/creator/analytics/${params.id}`);
+        const { id } = await params;
+        const res = await fetch(`/api/v1/creator/analytics/${id}`);
         if (!res.ok) {
           throw new Error('Failed to fetch analytics data');
         }
@@ -63,7 +64,7 @@ export default function AnalyticsPage({ params }: { params: { id: string } }) {
     };
 
     fetchAnalytics();
-  }, [params.id]);
+  }, [params]);
 
   if (loading) {
     return (

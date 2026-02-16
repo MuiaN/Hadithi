@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link'; 
-import { notFound, useRouter } from 'next/navigation';
+import { notFound, useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, Edit, Calendar, Eye, Tag, CheckCircle, XCircle, AlertCircle, Clock, ChevronLeft, ChevronRight, Trash2 } from 'lucide-react';
 import { useToast } from '@/components/ui/use-toast';
 import { Toaster } from '@/components/ui/toaster';
@@ -30,7 +30,9 @@ interface Gallery {
   };
 }
 
-export default function GalleryViewPage({ params }: { params: { id: string } }) {
+export default function GalleryViewPage() {
+  const params = useParams();
+  const id = params.id as string;
   const [gallery, setGallery] = useState<Gallery | null>(null);
   const [loading, setLoading] = useState(true);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
@@ -44,7 +46,7 @@ export default function GalleryViewPage({ params }: { params: { id: string } }) 
     window.scrollTo(0, 0);
     const fetchGallery = async () => {
       try {
-        const res = await fetch(`/api/v1/creator/galleries/${params.id}`);
+        const res = await fetch(`/api/v1/creator/galleries/${id}`);
         if (!res.ok) {
           if (res.status === 404) notFound();
           throw new Error('Failed to fetch gallery');
@@ -59,7 +61,7 @@ export default function GalleryViewPage({ params }: { params: { id: string } }) 
     };
 
     fetchGallery();
-  }, [params.id]);
+  }, [id]);
 
   // Keyboard navigation for lightbox
   useEffect(() => {
@@ -99,7 +101,7 @@ export default function GalleryViewPage({ params }: { params: { id: string } }) 
   const confirmDelete = async () => {
     setIsDeleting(true);
     try {
-      const response = await fetch(`/api/v1/creator/galleries/${params.id}`, {
+      const response = await fetch(`/api/v1/creator/galleries/${id}`, {
         method: 'DELETE',
       });
       if (!response.ok) throw new Error('Failed to delete gallery');

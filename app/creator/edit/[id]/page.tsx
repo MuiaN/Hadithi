@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import { 
   Save, 
   Eye, 
@@ -27,8 +27,9 @@ import { Toaster } from '@/components/ui/toaster';
 
 const RichTextEditor = dynamic(() => import('@/components/ui/RichTextEditor'), { ssr: false });
 
-export default function EditContentPage({ params }: { params: { id: string } }) {
-  const { id } = params;
+export default function EditContentPage() {
+  const params = useParams();
+  const id = params.id as string;
   const cleanId = id.replace(/\/$/, ''); // Clean the ID once and reuse
 
   interface FormDataState {

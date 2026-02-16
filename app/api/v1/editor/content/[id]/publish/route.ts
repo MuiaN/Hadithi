@@ -22,7 +22,8 @@ import { getAuth } from '@/lib/auth';
  *       404:
  *         description: Content not found.
  */
-export async function PUT(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PUT(req: NextRequest, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const user = await getAuth(req);
   if (!user || (user.role !== 'EDITOR' && user.role !== 'ADMIN')) {
     return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
