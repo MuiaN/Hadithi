@@ -114,5 +114,14 @@ To address Vercel serverless function payload limits (4.5MB) and improve databas
 *   **Type-Safe Routing:** Refactored all "Related Content" and "Linked Content" components across Story, Article, Book, and Podcast view pages to generate specific URLs based on content type (e.g., `/creator/books/slug` instead of generic `/creator/content/slug`), fixing navigation issues.
 *   **Slug Integration:** Completed the transition to slug-based routing for all view and edit actions in the sidebar and related content lists.
 
+### 15. Next.js 15+ Compatibility & Build Optimization
+*   **Route Params Migration:** Updated all API route handlers and page components to treat `params` as a `Promise`, resolving breaking changes introduced in Next.js 15.
+*   **Build Configuration:** Configured `next.config.js` and `package.json` to explicitly use Webpack for builds, resolving conflicts with the new default Turbopack behavior in Next.js 16.
+*   **Path Correction:** Fixed directory naming conventions in the Editor API (`{id}` -> `[id]`) to ensure correct dynamic routing and build success.
+
+### 16. User Experience Enhancements
+*   **Searchable Dropdowns:** Replaced standard select inputs with a custom `SearchableSelect` component for linking Galleries and Podcasts. This allows creators to easily search and select content from large libraries without scrolling.
+*   **Standardized Navigation:** Unified the redirection logic across all content creation and editing pages. Users are now consistently redirected to the main Creator Dashboard (`/creator`) after saving or cancelling, improving workflow predictability.
+
 ---
 *Report generated for Project Manager review.*

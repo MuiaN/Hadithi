@@ -19,6 +19,7 @@ import { upload } from '@vercel/blob/client';
 import { toast } from '@/components/ui/use-toast';
 import { Toaster } from '@/components/ui/toaster';
 import ChapterManager, { Chapter } from '@/components/creator/ChapterManager';
+import SearchableSelect from '@/components/ui/SearchableSelect';
 
 // Dynamically import a rich text editor to avoid SSR issues
 const RichTextEditor = dynamic(() => import('@/components/ui/RichTextEditor'), { ssr: false });
@@ -33,11 +34,11 @@ export default function NewBookPage() {
     coverImage: '',
     isFree: true,
     subscriptionTier: null as string | null,
-    rejectionReason: null,
-    seriesId: null,
+    rejectionReason: null as string | null,
+    seriesId: null as string | null,
     chapterNumber: null as number | null,
-    galleryId: null,
-    linkedPodcastId: null,
+    galleryId: null as string | null,
+    linkedPodcastId: null as string | null,
     chapters: [] as Chapter[],
   });
   const [newTag, setNewTag] = useState('');

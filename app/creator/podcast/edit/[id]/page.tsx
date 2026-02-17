@@ -438,7 +438,7 @@ export default function EditPodcastPage() {
 
           {/* Actions */}
           <div className="flex items-center justify-between">
-            <button type="button" onClick={() => router.back()} className="px-6 py-3 rounded-lg font-medium transition-colors" style={{ backgroundColor: 'var(--color-backgroundSecondary)', color: 'var(--color-textPrimary)' }}>Cancel</button>
+            <button type="button" onClick={() => router.push('/creator')} className="px-6 py-3 rounded-lg font-medium transition-colors" style={{ backgroundColor: 'var(--color-backgroundSecondary)', color: 'var(--color-textPrimary)' }}>Cancel</button>
             <div className="flex items-center space-x-4">
               <button type="button" onClick={handleDeleteClick} disabled={saving} className="flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-colors text-red-500 hover:bg-red-500/10 disabled:opacity-50"><Trash2 size={16} /><span>Archive</span></button>
               <button type="button" onClick={(e) => handleSubmit(e, 'DRAFT')} disabled={saving} className="flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50" style={{ backgroundColor: 'var(--color-secondary)', color: 'var(--color-textPrimary)' }}><Save size={16} /><span>{saving ? 'Saving...' : 'Save Changes'}</span></button>

@@ -19,6 +19,7 @@ import dynamic from 'next/dynamic';
 import { upload } from '@vercel/blob/client';
 import { toast } from '@/components/ui/use-toast';
 import { Toaster } from '@/components/ui/toaster';
+import SearchableSelect from '@/components/ui/SearchableSelect';
 
 const RichTextEditor = dynamic(() => import('@/components/ui/RichTextEditor'), { ssr: false });
 
@@ -177,7 +178,7 @@ export default function EditArticlePage() {
         const errorData = await res.json();
         throw new Error(errorData.message || (errorData.errors ? Object.values(errorData.errors).flat().join(', ') : 'Failed to update content'));
       }
-      router.push('/creator/content');
+      router.push('/creator');
     } catch (error) {
       console.error('Error updating content:', error);
       setError((error as Error).message);
@@ -198,7 +199,7 @@ export default function EditArticlePage() {
         method: 'DELETE',
       });
       if (!res.ok) throw new Error('Failed to delete content');
-      router.push('/creator/content');
+      router.push('/creator');
     } catch (error) {
       console.error('Error deleting content:', error);
     } finally {
@@ -575,22 +576,22 @@ export default function EditArticlePage() {
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label htmlFor="galleryId" className="block text-sm font-medium mb-2" style={{ color: 'var(--color-textPrimary)' }}>
-                  Attach a Gallery
-                </label>
-                <select id="galleryId" name="galleryId" value={formData.galleryId || ''} onChange={handleChange} className="w-full px-3 py-2 rounded-lg border" style={{ backgroundColor: 'var(--color-input)', borderColor: 'var(--color-inputBorder)', color: 'var(--color-textPrimary)' }}>
-                  <option value="">None</option>
-                  {galleriesList.map(gallery => (<option key={gallery.id} value={gallery.id}>{gallery.title}</option>))}
-                </select>
+                <SearchableSelect
+                  label="Attach a Gallery"
+                  options={galleriesList}
+                  value={formData.galleryId}
+                  onChange={(value) => setFormData(prev => ({ ...prev, galleryId: value }))}
+                  placeholder="Select a gallery..."
+                />
               </div>
               <div>
-                <label htmlFor="linkedPodcastId" className="block text-sm font-medium mb-2" style={{ color: 'var(--color-textPrimary)' }}>
-                  Link to a Podcast
-                </label>
-                <select id="linkedPodcastId" name="linkedPodcastId" value={formData.linkedPodcastId || ''} onChange={handleChange} className="w-full px-3 py-2 rounded-lg border" style={{ backgroundColor: 'var(--color-input)', borderColor: 'var(--color-inputBorder)', color: 'var(--color-textPrimary)' }}>
-                  <option value="">None</option>
-                  {podcastsList.map(podcast => (<option key={podcast.id} value={podcast.id}>{podcast.title}</option>))}
-                </select>
+                <SearchableSelect
+                  label="Link to a Podcast"
+                  options={podcastsList}
+                  value={formData.linkedPodcastId}
+                  onChange={(value) => setFormData(prev => ({ ...prev, linkedPodcastId: value }))}
+                  placeholder="Select a podcast..."
+                />
               </div>
             </div>
             <p className="text-xs mt-4" style={{ color: 'var(--color-textSecondary)' }}>
@@ -601,7 +602,7 @@ export default function EditArticlePage() {
           </div>
           
           <div className="flex items-center justify-between">
-            <button type="button" onClick={() => router.push('/creator/content')} className="px-6 py-3 rounded-lg font-medium transition-colors" style={{ backgroundColor: 'var(--color-backgroundSecondary)', color: 'var(--color-textPrimary)' }}>Cancel</button>
+            <button type="button" onClick={() => router.push('/creator')} className="px-6 py-3 rounded-lg font-medium transition-colors" style={{ backgroundColor: 'var(--color-backgroundSecondary)', color: 'var(--color-textPrimary)' }}>Cancel</button>
             <div className="flex items-center space-x-4">
               <button type="button" onClick={handleDeleteClick} disabled={saving} className="flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-colors text-red-500 hover:bg-red-500/10 disabled:opacity-50"><Trash2 size={16} /><span>Delete</span></button>
               <button type="button" onClick={(e) => handleSubmit(e, 'DRAFT')} disabled={saving} className="flex items-center space-x-2 px-6 py-3 rounded-lg font-medium transition-colors disabled:opacity-50" style={{ backgroundColor: 'var(--color-secondary)', color: 'var(--color-textPrimary)' }}><Save size={16} /><span>{saving ? 'Saving...' : 'Save Changes'}</span></button>

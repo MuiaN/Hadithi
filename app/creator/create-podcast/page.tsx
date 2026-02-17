@@ -44,7 +44,7 @@ export default function CreatePodcastPage() {
     duration: '',
     isFree: true,
     subscriptionTier: null as string | null,
-    seriesId: null,
+    seriesId: null as string | null,
     chapterNumber: null as number | null,
   });
   const [newTag, setNewTag] = useState('');
@@ -479,7 +479,7 @@ export default function CreatePodcastPage() {
           <div className="flex items-center justify-between">
             <button
               type="button"
-              onClick={() => router.back()}
+              onClick={() => router.push('/creator')}
               className="px-6 py-3 rounded-lg font-medium transition-colors"
               style={{ backgroundColor: 'var(--color-backgroundSecondary)', color: 'var(--color-textPrimary)' }}
             >

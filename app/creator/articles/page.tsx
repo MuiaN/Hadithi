@@ -20,6 +20,7 @@ import dynamic from 'next/dynamic';
 import { upload } from '@vercel/blob/client';
 import { toast } from '@/components/ui/use-toast';
 import { Toaster } from '@/components/ui/toaster';
+import SearchableSelect from '@/components/ui/SearchableSelect';
 
 // Dynamically import a rich text editor to avoid SSR issues
 const RichTextEditor = dynamic(() => import('@/components/ui/RichTextEditor'), { ssr: false });
@@ -34,11 +35,11 @@ export default function NewArticlePage() {
     coverImage: '',
     isFree: true,
     subscriptionTier: null as string | null,
-    rejectionReason: null,
-    seriesId: null,
+    rejectionReason: null as string | null,
+    seriesId: null as string | null,
     chapterNumber: null as number | null,
-    galleryId: null,
-    linkedPodcastId: null,
+    galleryId: null as string | null,
+    linkedPodcastId: null as string | null,
     citations: '',
   });
   const [newTag, setNewTag] = useState('');

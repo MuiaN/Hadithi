@@ -19,6 +19,7 @@ import dynamic from 'next/dynamic';
 import { upload } from '@vercel/blob/client';
 import { toast } from '@/components/ui/use-toast';
 import { Toaster } from '@/components/ui/toaster';
+import SearchableSelect from '@/components/ui/SearchableSelect';
 
 // Dynamically import a rich text editor to avoid SSR issues
 const RichTextEditor = dynamic(() => import('@/components/ui/RichTextEditor'), { ssr: false });
@@ -33,11 +34,11 @@ export default function NewStoryPage() {
     coverImage: '',
     isFree: true,
     subscriptionTier: null as string | null,
-    rejectionReason: null,
-    seriesId: null,
+    rejectionReason: null as string | null,
+    seriesId: null as string | null,
     chapterNumber: null as number | null,
-    galleryId: null,
-    linkedPodcastId: null,
+    galleryId: null as string | null,
+    linkedPodcastId: null as string | null,
   });
   const [newTag, setNewTag] = useState('');
   const [seriesList, setSeriesList] = useState<{ id: string; title: string }[]>([]);
@@ -538,40 +539,22 @@ export default function NewStoryPage() {
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label htmlFor="galleryId" className="block text-sm font-medium mb-2" style={{ color: 'var(--color-textPrimary)' }}>
-                  Attach a Gallery
-                </label>
-                <select
-                  id="galleryId"
-                  name="galleryId"
-                  value={formData.galleryId || ''}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 rounded-lg border"
-                  style={{ backgroundColor: 'var(--color-input)', borderColor: 'var(--color-inputBorder)', color: 'var(--color-textPrimary)' }}
-                >
-                  <option value="">None</option>
-                  {galleriesList.map(gallery => (
-                    <option key={gallery.id} value={gallery.id}>{gallery.title}</option>
-                  ))}
-                </select>
+                <SearchableSelect
+                  label="Attach a Gallery"
+                  options={galleriesList}
+                  value={formData.galleryId}
+                  onChange={(value) => setFormData(prev => ({ ...prev, galleryId: value }))}
+                  placeholder="Select a gallery..."
+                />
               </div>
               <div>
-                <label htmlFor="linkedPodcastId" className="block text-sm font-medium mb-2" style={{ color: 'var(--color-textPrimary)' }}>
-                  Link to a Podcast
-                </label>
-                <select
-                  id="linkedPodcastId"
-                  name="linkedPodcastId"
-                  value={formData.linkedPodcastId || ''}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 rounded-lg border"
-                  style={{ backgroundColor: 'var(--color-input)', borderColor: 'var(--color-inputBorder)', color: 'var(--color-textPrimary)' }}
-                >
-                  <option value="">None</option>
-                  {podcastsList.map(podcast => (
-                    <option key={podcast.id} value={podcast.id}>{podcast.title}</option>
-                  ))}
-                </select>
+                <SearchableSelect
+                  label="Link to a Podcast"
+                  options={podcastsList}
+                  value={formData.linkedPodcastId}
+                  onChange={(value) => setFormData(prev => ({ ...prev, linkedPodcastId: value }))}
+                  placeholder="Select a podcast..."
+                />
               </div>
             </div>
             <p className="text-xs mt-4" style={{ color: 'var(--color-textSecondary)' }}>
