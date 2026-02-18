@@ -123,5 +123,9 @@ To address Vercel serverless function payload limits (4.5MB) and improve databas
 *   **Searchable Dropdowns:** Replaced standard select inputs with a custom `SearchableSelect` component for linking Galleries and Podcasts. This allows creators to easily search and select content from large libraries without scrolling.
 *   **Standardized Navigation:** Unified the redirection logic across all content creation and editing pages. Users are now consistently redirected to the main Creator Dashboard (`/creator`) after saving or cancelling, improving workflow predictability.
 
+### 17. Chapter Management UX Improvements
+*   **Dynamic Button Labels:** Updated "Add Chapter" and "Add Sub-chapter" buttons to dynamically display the next available chapter number (e.g., "Add Chapter 2", "Add Sub-chapter 1.2"). This provides immediate context to the author about the structure they are building.
+*   **Visual Refinements:** Modernized the "Add Chapter" button design with a solid border, background color, and centered 3/4 width layout to make it distinct from content areas while maintaining visual hierarchy.
+
 ---
 *Report generated for Project Manager review.*

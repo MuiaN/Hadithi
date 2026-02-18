@@ -90,6 +90,7 @@ export default function ChapterManager({ chapters, onChange }: ChapterManagerPro
   const renderChapter = (chapter: Chapter, index: number, parentIndexStr: string = '') => {
     const numbering = parentIndexStr ? `${parentIndexStr}.${index + 1}` : `${index + 1}`;
     const isExpanded = expandedChapters[chapter.id];
+    const nextSubChapterNumber = `${numbering}.${chapter.subChapters.length + 1}`;
 
     return (
       <div key={chapter.id} className="border rounded-lg mb-4 bg-[var(--color-card)] border-[var(--color-border)]">
@@ -135,9 +136,9 @@ export default function ChapterManager({ chapters, onChange }: ChapterManagerPro
                 variant="outline"
                 size="sm"
                 onClick={() => addSubChapter(chapter.id)}
-                className="mt-2 text-[var(--color-textPrimary)] border-[var(--color-border)] hover:bg-[var(--color-backgroundSecondary)]"
+                className="mt-2 text-[var(--color-textPrimary)] border-[var(--color-border)] hover:bg-[var(--color-backgroundSecondary)] hover:border-[var(--color-primary)] hover:text-[var(--color-primary)] transition-colors"
               >
-                <Plus size={14} className="mr-1" /> Add Sub-chapter
+                <Plus size={14} className="mr-1" /> Add Sub-chapter {nextSubChapterNumber}
               </Button>
             </div>
           </div>
@@ -152,10 +153,10 @@ export default function ChapterManager({ chapters, onChange }: ChapterManagerPro
       <Button
         type="button"
         onClick={addChapter}
-        className="w-full py-6 border-dashed border-2 bg-transparent hover:bg-[var(--color-backgroundSecondary)] text-[var(--color-textSecondary)] border-[var(--color-border)]"
+        className="w-3/4 mx-auto flex py-6 border-2 bg-[var(--color-backgroundSecondary)] hover:bg-[var(--color-backgroundTertiary)] border-[var(--color-border)] hover:border-[var(--color-primary)] text-[var(--color-textPrimary)] hover:text-[var(--color-primary)] transition-colors"
         variant="outline"
       >
-        <Plus size={20} className="mr-2" /> Add New Chapter
+        <Plus size={20} className="mr-2" /> Add Chapter {chapters.length + 1}
       </Button>
     </div>
   );
